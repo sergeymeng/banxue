@@ -1,0 +1,331 @@
+{
+  "date": "2026-10-30",
+  "scope": "选型、静态代码/许可检查和隔离语音冒烟测试；未修改产品功能",
+  "hardware": {
+    "cpu": "Apple M5 Pro",
+    "architecture": "arm64",
+    "memory_gib": 24
+  },
+  "runtime": {
+    "sherpa_onnx": "2.0.1",
+    "tts_provider": "cpu",
+    "tts_threads": 4,
+    "whisper_gpu": "Metal (confirmed by logs)",
+    "whisper_threads": 4
+  },
+  "repos": [
+    {
+      "repo": "snakers4/silero-vad",
+      "sha": "066409f3d9db45a30d21dfcbf9147826ffdd7052",
+      "last_commit": "2026-10-22T02:02:27Z",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "url": "https://github.com/snakers4/silero-vad"
+    },
+    {
+      "repo": "k2-fsa/sherpa-onnx",
+      "sha": "935e5ded3d949a8b557ac44ef4dad03a7d2038e7",
+      "last_commit": "2026-10-29T12:00:57Z",
+      "archived": false,
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "url": "https://github.com/k2-fsa/sherpa-onnx"
+    },
+    {
+      "repo": "hexgrad/kokoro",
+      "sha": "dfb907a02bba8152ca444717ca5d78747ccb4bec",
+      "last_commit": "2025-08-06T22:28:53Z",
+      "archived": false,
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "url": "https://github.com/hexgrad/kokoro"
+    },
+    {
+      "repo": "excalidraw/excalidraw",
+      "sha": "a758e93d6a03e9f995973703cb886850a398a6d3",
+      "last_commit": "2026-10-30T19:19:53Z",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "url": "https://github.com/excalidraw/excalidraw"
+    },
+    {
+      "repo": "hexgrad/misaki",
+      "sha": "fba1236595f2d2bf21d414ba6e57d25256afada3",
+      "last_commit": "2025-08-11T01:20:38Z",
+      "archived": false,
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "url": "https://github.com/hexgrad/misaki"
+    },
+    {
+      "repo": "ggml-org/whisper.cpp",
+      "sha": "482279b8a18855ba741d7b88c30fcb3874691f59",
+      "last_commit": "2026-10-30T05:51:01Z",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "url": "https://github.com/ggml-org/whisper.cpp"
+    },
+    {
+      "repo": "PaddlePaddle/PaddleOCR",
+      "sha": "dab3fe35379033fdcb2d0e9572fac0b36c9a9ebf",
+      "last_commit": "2026-09-16T03:30:53Z",
+      "archived": false,
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "url": "https://github.com/PaddlePaddle/PaddleOCR"
+    },
+    {
+      "repo": "SYSTRAN/faster-whisper",
+      "sha": "9e472ae9de8bb374552f531f752654554b76b2d6",
+      "last_commit": "2026-10-16T11:12:55Z",
+      "archived": false,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "url": "https://github.com/SYSTRAN/faster-whisper"
+    }
+  ],
+  "model_files": [
+    {
+      "filename": "ggml-base.bin",
+      "bytes": 147951465,
+      "sha256": "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe"
+    },
+    {
+      "filename": "ggml-small.bin",
+      "bytes": 487601967,
+      "sha256": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b"
+    },
+    {
+      "filename": "kokoro-int8-multi-lang-v1_1.tar.bz2",
+      "bytes": 147052523,
+      "sha256": "259c9c8bc906d6078e4e0570421885dabb68b539c2f970fcbb890a58eeaf3e9c"
+    }
+  ],
+  "model_sources": [
+    "https://huggingface.co/ggerganov/whisper.cpp",
+    "https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models",
+    "https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh"
+  ],
+  "results": {
+    "tts-results": [
+      {
+        "name": "en",
+        "input": "Let us take this one step at a time. What is the derivative of x squared?",
+        "speaker": 0,
+        "generation_seconds": 2.191,
+        "first_chunk_seconds": 1.122,
+        "audio_seconds": 3.967,
+        "chunks": 2,
+        "sample_rate": 24000
+      },
+      {
+        "name": "zh",
+        "input": "我们先看这一步。先求外层函数的导数，再乘以内层函数的导数。",
+        "speaker": 50,
+        "generation_seconds": 4.356,
+        "first_chunk_seconds": 1.27,
+        "audio_seconds": 7.147,
+        "chunks": 3,
+        "sample_rate": 24000
+      },
+      {
+        "name": "mixed",
+        "input": "这道题用 chain rule，也就是链式法则。",
+        "speaker": 50,
+        "generation_seconds": 2.499,
+        "first_chunk_seconds": 1.221,
+        "audio_seconds": 3.875,
+        "chunks": 2,
+        "sample_rate": 24000
+      }
+    ],
+    "asr-synthetic-results": [
+      {
+        "name": "en",
+        "input_type": "synthetic Kokoro speech; not human accuracy benchmark",
+        "wall_seconds": 0.255,
+        "exit": 0,
+        "transcript": "Let us take this one step at a time. What is the derivative of x squared?"
+      },
+      {
+        "name": "zh",
+        "input_type": "synthetic Kokoro speech; not human accuracy benchmark",
+        "wall_seconds": 0.196,
+        "exit": 0,
+        "transcript": "我們先看這一步,先求外層寒樹的島樹,再成以內層寒樹的島樹。"
+      },
+      {
+        "name": "mixed",
+        "input_type": "synthetic Kokoro speech; not human accuracy benchmark",
+        "wall_seconds": 0.165,
+        "exit": 0,
+        "transcript": "这道提用称入,也就是练试法则。"
+      }
+    ],
+    "asr-small-results": [
+      {
+        "model": "small",
+        "name": "en",
+        "wall_seconds": 0.536,
+        "transcript": "Let us take this one step at a time. What is the derivative of x squared?",
+        "exit": 0
+      },
+      {
+        "model": "small",
+        "name": "zh",
+        "wall_seconds": 0.494,
+        "transcript": "我们先看这一步,先求外层寒树的岛树,再乘以内层寒树的岛树。",
+        "exit": 0
+      },
+      {
+        "model": "small",
+        "name": "mixed",
+        "wall_seconds": 0.343,
+        "transcript": "这道提用趁辱,也就是练试法则。",
+        "exit": 0
+      },
+      {
+        "model": "small",
+        "name": "system-zh",
+        "wall_seconds": 0.392,
+        "transcript": "我們先看這一步,先求外層寒樹的倒樹,再乘以內層寒樹的倒樹。",
+        "exit": 0
+      }
+    ],
+    "asr-prompted-results": [
+      {
+        "model": "small",
+        "name": "zh",
+        "prompt": "数学课堂术语：函数、导数、链式法则、乘积法则、幂函数、chain rule、product rule。",
+        "wall_seconds": 0.493,
+        "transcript": "我们先看这一步,先求外层函数的导数,再乘以内层函数的导数。",
+        "exit": 0
+      },
+      {
+        "model": "small",
+        "name": "mixed",
+        "prompt": "数学课堂术语：函数、导数、链式法则、乘积法则、幂函数、chain rule、product rule。",
+        "wall_seconds": 0.343,
+        "transcript": "这道提用签误,也就是链式法则。",
+        "exit": 0
+      },
+      {
+        "model": "small",
+        "name": "system-zh",
+        "prompt": "数学课堂术语：函数、导数、链式法则、乘积法则、幂函数、chain rule、product rule。",
+        "wall_seconds": 0.41,
+        "transcript": "我们先看这一步,先求外层函数的导数,再乘以内层函数的导数。",
+        "exit": 0
+      }
+    ],
+    "asr-system-voice": {
+      "model": "base",
+      "input_type": "macOS Tingting synthetic speech",
+      "expected": "我们先看这一步。先求外层函数的导数，再乘以内层函数的导数。",
+      "transcript": "我們先看這一步,先求外層寒數的倒數,再成以內層寒數的倒數。",
+      "wall_seconds": 0.21
+    },
+    "asr-jfk": [
+      {
+        "run": 1,
+        "wall_seconds": 5.916,
+        "exit": 0,
+        "transcript": "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country."
+      },
+      {
+        "run": 2,
+        "wall_seconds": 0.229,
+        "exit": 0,
+        "transcript": "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country."
+      },
+      {
+        "run": 3,
+        "wall_seconds": 0.214,
+        "exit": 0,
+        "transcript": "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country."
+      }
+    ]
+  },
+  "limitations": [
+    "样本包括仓库自带 JFK 英语音频与合成语音；没有真人麦克风测试",
+    "合成语音回环错误无法全部归因于 ASR；增加了独立 macOS Tingting 合成语音对照，仍不代替真人录音",
+    "术语提示包含预设测试领域词汇，不能当作盲测准确率",
+    "CLI 耗时包括进程及模型启动；JFK 首次 5.916 秒，后两次缓存已预热；非端到端课堂延迟",
+    "TTS 首段时间是回调首次提供样本的时间，不是扬声器首次出声时间；没有主观音质评分",
+    "没有调用付费云端模型，没有测试视觉模型、真实手写或 Excalidraw 运行集成",
+    "没有完成传递依赖、模型训练数据、声音资源的完整法律审查"
+  ],
+  "integration_findings": [
+    {
+      "file": "desktop/main.cjs",
+      "finding": "权限处理器全部拒绝，需按窗口与来源仅开放麦克风；CSP 需验证音频播放路径"
+    },
+    {
+      "file": "desktop/scripts/package.mjs",
+      "finding": "当前未声明 NSMicrophoneUsageDescription"
+    },
+    {
+      "file": "backend/app/voice.py",
+      "finding": "只有 Protocol；需实现独立 STT/TTS 适配与取消契约"
+    },
+    {
+      "file": "backend/app/llm.py",
+      "finding": "目前完整 HTTP 响应；边生成边说需实现流式文本与分句"
+    },
+    {
+      "file": "frontend/components/Whiteboard.tsx",
+      "finding": "tldraw 快照、导图、教师元素过滤与撤销需要迁移适配；不能仅换包名"
+    }
+  ],
+  "recommendations": {
+    "architecture": "独立可替换 ASR / LLM / TTS / Vision / Board；云端和本地都支持",
+    "asr": "whisper.cpp 作为本地基线；base/small 无提示中文数学表现不足；云端实时 ASR 需同题对测后选默认",
+    "tts": "Kokoro/sherpa 路线可运行但仅作为本地候选；云端流式 TTS 列入对照，尚未试听定型",
+    "vision": "多模态 LLM 优先接入现有视觉接口；PaddleOCR/FormulaNet 作为辅助候选，尚未实测",
+    "board": "Excalidraw 进入迁移验证；React peer 范围允许 19，正式版本仍需渲染、保存和撤销测试",
+    "next_deliverable": "应用内可录音、可编辑转写、经真实 LLM 生成回复、分段朗读并可立即停止的语音对话；独立设置模型，保留文字输入"
+  }
+}

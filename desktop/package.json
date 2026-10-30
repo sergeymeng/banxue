@@ -1,0 +1,23 @@
+{
+  "name": "banxue-desktop",
+  "productName": "伴学",
+  "version": "0.3.0",
+  "private": true,
+  "description": "本地一对一数学课堂",
+  "author": "Local Private Tutor contributors",
+  "license": "MIT",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/*.test.cjs",
+    "package": "node scripts/package.mjs",
+    "test:smoke": "node scripts/smoke.cjs",
+    "postinstall": "node node_modules/electron/install.js",
+    "test:voice": "node scripts/voice-smoke.cjs"
+  },
+  "devDependencies": {
+    "electron": "45.2.0",
+    "@electron/packager": "20.3.0",
+    "@playwright/test": "1.64.1"
+  }
+}

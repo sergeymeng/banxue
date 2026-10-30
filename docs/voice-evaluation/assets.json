@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-30",
+  "purpose": "Reproducible local VAD and synthetic-input test assets; no human or cloud accuracy claim",
+  "files": [
+    {
+      "path": "frontend/public/voice/silero_vad_v5.onnx",
+      "bytes": 2327524,
+      "sha256": "2623a2953f6ff3d2c1e61740c6cdb7168133479b267dfef114a4a3cc5bdd788f"
+    },
+    {
+      "path": "frontend/public/voice/vad.worklet.bundle.min.js",
+      "bytes": 2480,
+      "sha256": "8a48fdc7429948a2fde3d29a84bb1a64c1f67b4ba578ccaa7548b7f989f06a74"
+    },
+    {
+      "path": "frontend/tests/fixtures/interruption-synthetic.wav",
+      "bytes": 167732,
+      "sha256": "699141b2c8ecab3b09ab1d48d7325493eb55aac0e09601e50fb16ed68d30f43f"
+    }
+  ]
+}
