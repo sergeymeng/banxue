@@ -1,5 +1,7 @@
 """Offline expression of a policy decision; never changes state or judges mastery."""
 
+from .teaching_observations import confirmed_observation
+
 
 def demo_reply(state, decision, text):
     if state.get("mode") == "baseline":
@@ -16,8 +18,8 @@ def demo_reply(state, decision, text):
     if decision.reason == "voice_question":
         return "我听到的是「" + text[:80] + "」。请确认关键符号，或把表达式打出来，我再检查这一步。"
     if decision.reason == "completed_step":
-        visible = str(state.get("observation", {}).get("visible_text", ""))[:100]
-        return "识别到的这一步是「" + visible + "」。这是你的写法吗？请打出表达式确认。"
+        visible = str((confirmed_observation(state) or {}).get("visible_text", ""))[:100]
+        return "你核对的这一步是「" + visible + "」。这里用了哪条求导规则？"
     if decision.reason in {"step_passed", "step_retry", "incorrect_answer", "correction_received"}:
         return "你刚才写的是「" + text[:80] + "」。" + decision.instruction
     return decision.instruction

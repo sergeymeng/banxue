@@ -238,7 +238,7 @@ def test_observation_confidence_no_assessment_and_dedupe(tmp_path):
         path = f"/api/lessons/{lesson['id']}/observe"
         result = client.post(path, json={"image": image, "trigger": "explicit"}).json()
         assert result["decision"]["action"] == "ASK"
-        assert result["decision"]["reason"] == "uncertain_observation"
+        assert result["decision"]["reason"] == "needs_confirmation"
         assert client.get(f"/api/teachers/{teacher['id']}/memory").json() == []
         assert client.post(path, json={"image": image, "trigger": "explicit"}).json()["skipped"] == "白板没有变化"
         assert len(client.get(f"/api/lessons/{lesson['id']}/usage").json()["requests"]) == 1
@@ -341,7 +341,7 @@ def test_unknown_price_blocks_and_config_never_leaks(tmp_path):
         assert c.get(f"/api/lessons/{lesson['id']}/usage").json()["requests"] == []
 
 
-def test_real_adapter_successful_observation_routes_to_reasoning(tmp_path):
+def test_high_confidence_legacy_observation_requires_review(tmp_path):
     roles = []
 
     def response(request):
@@ -371,7 +371,8 @@ def test_real_adapter_successful_observation_routes_to_reasoning(tmp_path):
         image = "data:image/png;base64," + base64.b64encode(b"\x89PNG\r\n\x1a\ntest").decode()
         result = c.post(f"/api/lessons/{lesson['id']}/observe", json={"image": image, "trigger": "explicit"}).json()
         assert result["decision"]["action"] == "ASK"
-        assert roles == ["vision-test", "reason-test"]
+        assert roles == ["vision-test"]
+        assert result["decision"]["reason"] == "needs_confirmation"
         assert c.get(f"/api/teachers/{teacher['id']}/memory").json() == []
 
 

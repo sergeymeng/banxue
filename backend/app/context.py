@@ -3,6 +3,7 @@ import json
 import tiktoken
 
 from .teaching_contracts import delivery_context
+from .teaching_observations import confirmed_observation
 from .teaching_steps import question
 
 ENCODER = tiktoken.get_encoding("cl100k_base")
@@ -54,7 +55,7 @@ def build_context(teacher, state, decision, sources, knowledge, settings):
         "current_check": state.get("answer_check"),
         "detour": state.get("detour"),
         "pending_correction": state.get("pending_correction"),
-        "board_observation": state.get("observation"),
+        "board_observation": confirmed_observation(state),
         "visible_board_text": (state.get("voice_context") or {}).get("whiteboard_text"),
         "last_summary": state.get("last_summary", ""),
         "plan": state.get("plan", []),
