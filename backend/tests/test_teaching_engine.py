@@ -160,7 +160,7 @@ def test_vision_uncertainty_and_incomplete_work():
         ],
     )
     decision = TeachingPolicy().decide(s, event="board")
-    assert decision.action == "ASK" and decision.reason == "uncertain_observation"
+    assert decision.action == "ASK" and decision.reason == "needs_confirmation"
     assert "确认" in decision.instruction and "answer_check" not in s
     s["observation"]["step_complete"] = False
     assert TeachingPolicy().decide(s, event="board").action == "WAIT"

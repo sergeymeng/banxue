@@ -3,6 +3,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Protocol
 
 from .curriculum import BANK
+from .teaching_observations import confirmed_observation
 from .teaching_steps import current_step, flow, next_prompt, question
 
 STATES = [
@@ -26,6 +27,7 @@ class Decision:
     role: str = "fast"
     auto: bool = False
     board_actions: list[dict] = field(default_factory=list)
+    board_cancellations: list[str] = field(default_factory=list)
 
     def json(self):
         return asdict(self)
@@ -127,16 +129,16 @@ class TeachingPolicy:
             return Decision("EXPLAIN" if event == "reexplain" else "HINT", prefix + prompt,
                             "student_" + event)
         if event == "board":
-            obs = s.get("observation", {})
-            if not obs.get("confirmed") or not obs.get("step_complete"):
-                return Decision("WAIT", "白板尚不足以可靠判断完整步骤，保持安静。", "uncertain_observation")
+            obs = confirmed_observation(s)
+            if obs is None:
+                if not (s.get("observation") or {}).get("step_complete"):
+                    return Decision("WAIT", "", "needs_confirmation")
+                return Decision("ASK", "请先核对原图中的表达式，确认后我们再看这一步。", "needs_confirmation")
+            if not obs["step_complete"]:
+                return Decision("WAIT", "先留时间写完这一步。", "unfinished_observation")
             s["assisted"] = True
-            return Decision(
-                "ASK",
-                "根据课堂数据中学生已核对的步骤提一个简短检查问题；涂掉的内容不作为有效步骤，不直接宣判错误。",
-                "completed_step",
-                "reasoning",
-            )
+            return Decision("ASK", "根据学生已核对的有效步骤提一个具体检查问题；确认转录不代表数学正确，"
+                            "不要评分或宣布掌握。", "completed_step", "reasoning")
         if not text.strip() and event == "message" and state in {
             "DIAGNOSTIC", "GUIDED_PRACTICE", "INDEPENDENT_PRACTICE"
         }:

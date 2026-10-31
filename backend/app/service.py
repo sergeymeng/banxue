@@ -11,6 +11,7 @@ from .llm import ModelError
 from .policy import BaselinePolicy, TeachingPolicy
 from .teaching_contracts import apply_events, propose_question
 from .teaching_language import demo_reply
+from .teaching_observations import bind_handwriting_observation
 from .teaching_steps import conversational_event, interpret_answer, next_prompt, question
 
 
@@ -92,6 +93,7 @@ async def turn(db, lesson, teacher, gateway, text="", event="message", *, voice_
         return {"lesson": public_lesson(lesson), "decision": None, "sources": []}
     if voice_context is not None:
         s["voice_context"] = voice_context
+    bind_handwriting_observation(db, lesson, s)
     s.pop("answer_check", None)
     if event == "message":
         event = conversational_event(text)
@@ -113,15 +115,13 @@ async def turn(db, lesson, teacher, gateway, text="", event="message", *, voice_
     if not typed and event == "message" and s["state"] != "ONBOARDING":
         event = "voice"
     decision = policy.decide(s, text, event, result)
-    if s.get("mode") != "baseline":
-        propose_question(s, decision, question(s))
     # Profile persists across sessions, isolated by teacher.
     knowledge = [r.data for r in db.scalars(select(Knowledge).where(Knowledge.teacher_id == teacher.id))]
     query = text + " " + BANK[s.get("topic_index", 0)]["title"] + " derivative differentiation"
     sources = retrieve(db, teacher.id, query)
     if gateway.settings.model_mode == "demo":
         reply = demo_reply(s, decision, text)
-    elif event in ["pause", "resume", "end"] or decision.action == "WAIT" or decision.reason == "uncertain_observation":
+    elif event in ["pause", "resume", "end"] or decision.action == "WAIT" or decision.reason in {"uncertain_observation", "needs_confirmation"}:
         reply = decision.instruction
     else:
         try:
@@ -144,6 +144,12 @@ async def turn(db, lesson, teacher, gateway, text="", event="message", *, voice_
         s.pop("answer_check", None)
         db.flush()
         knowledge = [r.data for r in db.scalars(select(Knowledge).where(Knowledge.teacher_id == teacher.id))]
+    if s.get("mode") != "baseline":
+        propose_question(s, decision, question(s), evidence_state=evidence_state)
+    previous_actions = lesson.data.get("board_actions", [])
+    cancelled = {a["action_id"] for a in s.get("board_actions", []) if a["status"] == "cancelled"}
+    decision.board_cancellations += [a["action_id"] for a in previous_actions
+                                    if a["status"] == "proposed" and a["action_id"] in cancelled]
     if decision.action == "WAIT" and event == "board":
         reply = ""
     if reply:

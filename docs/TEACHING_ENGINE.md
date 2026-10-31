@@ -67,7 +67,7 @@ await service.turn(db, lesson, teacher, gateway, text, event,
 
 ## 白板输出与执行回执
 
-`decision.board_actions` 是本轮新增的提案；`lesson.board_actions` 是有界状态账本（最多 20 条）。目前只提案题目，不实现自动写板书的执行器。
+`decision.board_actions` 是本轮新增的提案；`lesson.board_actions` 是有界状态账本（最多 20 条）。提案覆盖题目、当前步骤提示和已验证步骤；不实现自动写板书的执行器。`purpose` 为 `question | step_prompt | verified_step`，后者必须引用 `evidence_ids`。
 
 ```json
 {
@@ -75,7 +75,10 @@ await service.turn(db, lesson, teacher, gateway, text, event,
   "kind": "write_math",
   "text": "求 y=(2x+3)^3 的导数。",
   "exercise_key": "0:GUIDED_PRACTICE",
-  "status": "proposed"
+  "status": "proposed",
+  "purpose": "question",
+  "step_index": 0,
+  "evidence_ids": []
 }
 ```
 
@@ -94,24 +97,55 @@ service.receive_teaching_events(db, lesson, [{
 
 重复 event ID 幂等；未知 action ID、已经结束的动作和取消之后的迟到回执不改变状态。暂停、结束、插话/追问及换题会取消相应未执行提案。执行器必须检查最新状态，再执行队列中的提案。只有 `executed` 可进入“已展示”上下文，`proposed`、`failed`、`cancelled` 均不能。
 
-## 视觉观察契约
+## 视觉观察契约：先核对，再讨论
+
+新观察必须由学生在手写模块中核对。教学模块不依据模型自报 confidence 授权，旧数据包含 confidence 也不能绕过确认，低 confidence 的旧数据没有获得更宽松的通道。未确认转录不进入任何语言生成上下文。baseline 同样遵守这条边界。
+
+跨模块使用以下**服务器可信适配边界**，不能将视觉模型返回的 JSON 原样作为 `observation` 接收：
 
 ```python
 service.receive_teaching_events(db, lesson, [{
-    "event_id": "vision-observation-1",
+    "event_id": "review-delivery-1",
     "kind": "vision_observation",
     "exercise_key": "0:GUIDED_PRACTICE",
-    "visible_text": "du/dx = 2?",
-    "confidence": 0.4,
-    "step_complete": True
+    "observation": {
+        "id": "persisted-observation-id",
+        "confirmation_event_id": "persisted-student-review-event-id",
+        "exercise_key": "0:GUIDED_PRACTICE",
+        "confirmed": True,
+        "step_complete": True,  # 学生明确提交，而非模型输出或停笔
+        "source": {"kind": "whiteboard_region", "sha256": "image-hash",
+                   "snapshot_id": "revision-7", "page_id": "page-1"},
+        "image_sha256": "image-hash",
+        "steps": [{"id": "step-1", "text": "du/dx=2", "mark": "active"}],
+        "uncertainty": "student_reviewed_transcription; mathematical_correctness_unassessed"
+    }
 }])
-# 需要教师回应时，适配器再单独触发：
 await service.turn(db, lesson, teacher, gateway, event="board")
 ```
 
-观察必须绑定当前题；错题目键或暂停期间的观察不接收。视觉适配器还需校验当前白板快照版本，不能将旧快照结果用于新笔迹。新契约不是手写识别实现，也不会让 demo 模式获得视觉能力。
+接收端重新从 active 步骤构造 `visible_text`，不相信客户端/模型预拼的文本；crossed_out 内容不会进入教学提示，尚有 unclear 时拒绝确认交接。确认不自动调用多项式判分，不写 Knowledge，不产出“已验证步骤”板书；即使确认的是错误数学，也只提检查问题。评分仍通过独立的学生表达式提交路径完成。
 
-步骤未完成时等待；已明确提交但低置信度时直接要求确认，不额外调用语言模型；高置信度时提出检查问题，仍不评分。学生需要键入表达式确认。原 `/observe` 路径继续兼容，模型与图像处理实现未修改。
+`bind_handwriting_observation` 兼容手写分支当前的紧凑交接字段：通过 observation ID 和 confirmation Event ID 读取数据库，核对课堂归属、原观察类型/状态、当前题目/阶段、图片哈希和 student_review 来源，再从持久化 reviewed 记录补齐 source 和 exercise_key。缺少记录时不猜来源、不回退到 confidence。这个适配只依赖已有 Event 表，不导入或复制手写模块。
+
+未核对、缺少来源、旧题目或已被更新观察替代的内容不会进入模型上下文。存在 `pending_observation_id` 时自动推进停止；新待核对观察不能被旧确认回执清除。新事件批次的 schema 与语义检查一起原子应用。
+
+这里没有新增路由或前端确认界面；由集成分支保留手写分支的 observe/confirm/discard 路径，且负责会话身份、不可变白板版本与学生确认入口的校验。教学侧旧 `/observe` 在本分支仍能返回确认提示，但高 confidence 不再额外触发语言模型。
+
+## 逐步板书与取消交接
+
+教师决定之后、最终表达式检查证据写入之前，不向执行器公布板书提案。服务完成本轮后生成提案：
+
+- 进入引导题：题目与一个步骤问题。
+- 提示/重讲：只写当前提示；重讲可写当前局部解释，辅助标记保留。
+- 步骤验证通过：从人工审阅题库取对应表达式，写入 `verified_step`，携带刚产生的 Event ID，再提出下一步问题。不会复用学生输入来生成可执行代码或任意标记。
+- 进入独立题：只写题目。恢复和返回原题不会提前写答案；学生主动求助后才允许写当前提示。
+
+提案文本为白板 v1 接受的纯 Unicode，最多 400 字符，不是 LaTeX、HTML 或 SVG。教学层不分配几何位置；集成层将 `action_id` 映射为白板 v1 action `id`，为 element 分配稳定唯一 ID、author=teacher 及布局，组成 `controller.enqueue({version:1,id,lessonId,actions})`。不要把模型回复直接拼成白板动作。
+
+每轮返回 `decision.board_cancellations: string[]`。暂停、结束、追问/纠正或换题取消旧的未执行提案；新步骤问题取代旧的未执行步骤问题。集成层必须先处理取消，再发送本轮新增动作。白板 v1 的 `cancel()` 取消所有 pending；若它连带取消仍有效的提案，必须把这些实际取消状态回报教学账本，不能复用旧 action ID 来重放。需要重新展示时由新的教学回合产生新 ID。不要因新提案而自动 resume 被暂停的执行器。
+
+执行器回报 `executed / failed / cancelled`；白板 v1 的 `pending` 对应教学侧 `proposed`，不是执行回执。`executedRevision` 可映射为回执的 `executed_revision`。重复、未知、旧题目、已取消和暂停后的迟到回执忽略。已执行回执是历史事实：undo 不使它回到 proposed，也不证明目前仍可见；实际可见内容以当前白板快照为准，更不证明语音已播放或学生已掌握。
 
 ## 验证与边界
 
@@ -131,4 +165,8 @@ npm run test:e2e
 
 浏览器回归使用 `data/e2e`、3100/8100 端口和单个 backend worker。测试通过不代表真实 LLM、ASR、TTS 或手写识别已验证。白板提案还需由白板分支接入执行器，本分支不会把提案当作已写出。
 
-本分支验证结果（2026-10-31）：后端 64 项通过、Ruff 通过；前端类型检查通过、9 项单测通过；4 项浏览器集成通过。没有修改前端界面，因此未额外执行生产构建。测试产生的通用课堂截图和语音仿真产物未纳入本分支提交。
+第一轮验证结果（2026-10-31）：后端 64 项通过、Ruff 通过；前端类型检查通过、9 项单测通过；4 项浏览器集成通过。没有修改前端界面，因此未额外执行生产构建。测试产生的通用课堂截图和语音仿真产物未纳入本分支提交。
+
+第二轮沿用 Qwen 云端作为首阶段默认表达方案，由使用者配置自己的 Key。教学策略、确认契约和板书提案没有供应商依赖，仍通过既有 complete/gateway 接口替换表达适配器；本轮未修改模型设置或供应商底层。
+
+第二轮验证结果（2026-10-31）：后端 80 项通过，Ruff 通过；前端类型检查及 9 项单测通过；原有 4 项浏览器集成通过，临时副本仅替换端口为 3203/8203、数据目录为 `data/e2e/teaching-engine`，避免干扰并行分支。临时配置和测试副本已删除，无前端源码改动。真实 Qwen/视觉与白板执行接线不由这些模拟测试证明。
