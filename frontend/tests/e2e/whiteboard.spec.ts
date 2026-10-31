@@ -50,7 +50,7 @@ test('shared board: ink, teacher sequence, pause/cancel, undo, region PNG and re
     for await (const chunk of stream!) parts.push(Buffer.from(chunk));
     const png = Buffer.concat(parts); expect(png.subarray(1, 4).toString()).toBe('PNG'); expect(png.readUInt32BE(16)).toBeLessThanOrEqual(1200);
     let observed = false;
-    await page.route('**/observe', async route => {
+    await page.route('**/observations', async route => {
       const image: string = route.request().postDataJSON().image;
       expect(image).toMatch(/^data:image\/png;base64,/);
       const pixels = await page.evaluate(async image => {
