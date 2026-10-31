@@ -12,6 +12,113 @@
 
 .board-tools,.board-queue{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:7px 12px;border-bottom:1px solid var(--line);flex-shrink:0;font-size:10px}.board-tools button,.board-queue button{font-size:11px;min-height:27px}.board-tools button[aria-pressed=true]{background:#e7eefb;border-color:#83a8e5;color:#275fc5}.board-tools label{display:flex;align-items:center;gap:5px}.board-tools select{padding:3px;font-size:10px}.board-legend{color:#777;margin-left:auto}.board-queue{background:#fafbfd;color:#777}.board-queue details{position:relative}.board-queue summary{cursor:pointer}.board-queue ol{position:absolute;z-index:2;left:0;top:20px;width:260px;max-height:180px;overflow:auto;background:white;border:1px solid #ddd;padding:12px 12px 12px 28px;box-shadow:0 3px 12px #0002}.board-scroll{overflow:auto;overscroll-behavior:contain;min-height:100px;background:#f6f7fa}.teaching-board{display:block;max-width:none;height:auto;aspect-ratio:4/3;touch-action:none;user-select:none;cursor:crosshair}.board-status{height:32px;gap:10px;justify-content:space-between}.board-status button{font-size:10px;min-height:22px;padding:1px 6px}.board-legacy{padding:20px;line-height:1.8;display:flex;gap:12px;flex-wrap:wrap}.board-legacy p{width:100%}@media(max-width:800px){.board-tools,.board-queue{gap:4px;padding:5px}.board-tools button,.board-queue button{font-size:10px;padding:3px 5px}.board-legend{margin-left:0}.workspace{height:650px}.board-toolbar{height:auto;min-height:43px}.board-actions{flex-wrap:wrap}}
 
+/* Classroom shell: keep writing and lesson controls in view; management opens on demand. */
+.classroom-app{height:100dvh;min-height:520px;grid-template-columns:minmax(0,1fr);grid-template-rows:44px minmax(0,1fr);overflow:hidden;background:#f3f5f8;color:#263448}
+.classroom-app .windowbar{grid-column:1;background:#fff;border-bottom:1px solid #e8ecf1}
+.classroom-app .app-name{font-weight:650;font-size:15px;margin-left:20px;letter-spacing:1px;color:#234b78}
+.classroom-app .app-name small{font-size:9px;letter-spacing:2px;color:#8191a4;margin-left:8px}
+.classroom-app.desktop-app .app-name{margin-left:90px}
+.classroom-app .window-title{color:#7f8b99}
+.navigation-toggle{-webkit-app-region:no-drag;margin-left:auto;margin-right:16px;border:0;background:transparent;font-size:11px;color:#6b7c91;box-shadow:none}
+.classroom-app .main-area{grid-row:2;grid-column:1;overflow:hidden}
+.classroom-app .toolbar{height:72px;background:#fff;padding:0 22px;border-bottom:1px solid #e5eaf0;gap:12px;flex-wrap:nowrap}
+.classroom-app .toolbar-title{gap:12px}
+.teacher-badge{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:#e9f0fb;color:#426ba3}
+.class-title h1{font-size:15px!important;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.class-title>span{display:block;margin-top:4px;font-size:11px;color:#8290a0}
+.classroom-app .state-pill{font-size:11px;color:#5e7b99;border:0;background:#eff4f9;padding:5px 9px;border-radius:20px}
+.classroom-app .toolbar-actions{gap:9px;flex-wrap:nowrap}
+.classroom-app .toolbar-actions>button{height:33px;border-color:#e0e6ed;background:#fff;font-size:12px;border-radius:7px}
+.classroom-app .toolbar-actions>button[aria-pressed=true]{background:#eaf1fc;color:#2b62af}
+.classroom-app .demo-indicator{font-size:10px;color:#8b7b60;padding:0 8px}
+.material-count{padding:1px 5px;background:#edf1f6;border-radius:4px;font-size:10px}
+.classroom-app .classroom{padding:16px;gap:16px;grid-template-columns:minmax(0,1fr) 330px;overflow:hidden;position:relative;display:grid;min-height:0;flex:1}
+.classroom-app .classroom.conversation-collapsed{grid-template-columns:minmax(0,1fr)}
+.classroom-app .workspace{height:auto;min-height:0;min-width:0;overflow:hidden}
+.classroom-app .board-panel{border:1px solid #dfe6ef;border-radius:12px;box-shadow:0 3px 10px #20365404;overflow:hidden;background:#fff}
+.classroom-app .board-toolbar{height:61px;padding:0 17px;gap:12px;align-items:center;border-color:#edf0f4}
+.board-heading h2{font-size:13px!important;font-weight:600!important;color:#354b66!important;display:block!important}
+.board-heading>span{display:block;font-size:10px;color:#8b97a6;margin-top:5px}
+.classroom-app .board-actions{width:auto;gap:8px;flex-wrap:nowrap}
+.classroom-app .board-actions button{min-height:31px;font-size:11px;padding:4px 10px;border-radius:6px}
+.classroom-app .board-actions .observe-step{color:#3166ae;border-color:#cfdff4;background:#f3f7fd}
+.classroom-app .board-tools{padding:8px 12px;gap:5px;min-height:50px;background:#fdfefe;border-color:#edf0f4}
+.classroom-app .board-tools>button{border:0;box-shadow:none;border-radius:6px;min-height:33px;font-size:11px;padding:5px 8px;color:#65758b;background:transparent;gap:5px}
+.classroom-app .board-tools>button[aria-pressed=true]{background:#e8effc;color:#285fac}
+.classroom-app .board-tools>button:disabled{opacity:.35}
+.classroom-app .board-tools label{margin-left:auto;color:#8c98a6}
+.classroom-app .board-tools select{border:0;background:#f0f3f7;min-height:29px;border-radius:5px;color:#697b91}
+.classroom-app .exercise-strip{padding:12px 18px;background:#f4f7fd;color:#35547c;line-height:1.7;border-color:#e9eef7;flex-shrink:0;font-size:13px}
+.classroom-app .exercise-strip>span{color:#6e8fb6;font-size:10px;font-weight:600}
+.classroom-app .board-scroll{min-height:80px;background:#eef2f7}
+.classroom-app .teaching-board{cursor:crosshair}
+.classroom-app .board-tool-pan .teaching-board{cursor:grab}
+.classroom-app .board-tool-pan .teaching-board:active{cursor:grabbing}
+.classroom-app .board-tool-eraser .teaching-board{cursor:cell}
+.classroom-app .board-status{height:30px;background:#fafbfd;border-color:#edf0f4;color:#8a98a8;padding:0 12px}
+.classroom-app .board-status button{border:0;background:none;box-shadow:none;color:#8392a4;font-size:10px}
+.board-extras{padding:10px 14px;border-bottom:1px solid #e6ebf3;background:#fbfcfe;max-height:210px;overflow:auto;flex-shrink:0}
+.board-extra-actions{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-bottom:9px}
+.board-extra-actions button{font-size:11px}
+.board-development>summary{font-size:10px;color:#8995a6;cursor:pointer}
+.classroom-app .board-queue{margin-top:8px;padding:0;border:0;background:none}
+.classroom-app .board-queue ol{position:static;box-shadow:none;max-height:120px;width:auto;margin:6px 0}
+.classroom-app .conversation{border:1px solid #e1e7ef;border-radius:12px;box-shadow:0 3px 10px #20365404;overflow:hidden;min-height:0;background:#fff}
+.classroom-app .chat-header{height:68px;padding:0 19px;border-color:#edf0f4}
+.chat-header>div{display:flex;flex-direction:column;gap:5px}
+.eyebrow{font-size:10px;font-weight:500;letter-spacing:.5px;color:#94a1b1}
+.classroom-app .chat-header strong{font-size:13px;font-weight:600;color:#40546f}
+.classroom-app .chat-scroll{padding:23px 20px;scrollbar-width:thin}
+.classroom-app .message{margin-bottom:24px}
+.classroom-app .message>div{font-size:13px;line-height:1.95;color:#485a70}
+.classroom-app .message-author{font-size:10px;color:#96a2b2;margin-bottom:7px}
+.classroom-app .message.user{margin-left:20px}
+.classroom-app .message.user>div{background:#f0f5fb;border-radius:9px}
+.classroom-app .quick-actions{gap:15px;padding:8px 18px 10px}
+.classroom-app .quick-actions button{color:#6f86a3;font-size:11px}
+.classroom-app .composer{margin:0 13px;border:1px solid #dee6f0;border-radius:9px;padding:12px;background:#fafcfe;box-shadow:none}
+.classroom-app .composer textarea{font-size:12px;background:transparent;height:60px;color:#41566f}
+.classroom-app .composer textarea::placeholder{color:#98a5b5}
+.classroom-app .composer-hint{color:#acb5c1;padding:8px 15px 12px}
+.classroom-app .lesson-dock{position:relative;display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:91px;padding:14px 22px;background:#fff;border-top:1px solid #e0e6ed;flex-shrink:0;z-index:4}
+.classroom-app .voice-controls{border:0;padding:0;position:relative;flex:1;min-width:0}
+.classroom-app .voice-buttons{gap:8px}
+.classroom-app .voice-buttons button,.lesson-controls button{min-height:36px;padding:7px 12px;border-radius:7px;font-size:11px;border-color:#dce4ee;color:#556b86;box-shadow:none}
+.classroom-app .voice-buttons .start-voice{background:#2d65b5;border-color:#2d65b5;color:white;min-width:146px}
+.voice-privacy{font-size:9px;line-height:1.5;color:#98a3b1;margin-top:7px}
+.voice-state{font-size:11px;color:#426652;background:#edf5ee;padding:7px 9px;border-radius:6px}
+.lesson-controls{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.lesson-control-label{font-size:10px;color:#a0aab8;margin-right:3px}
+.lesson-controls .end-lesson{color:#92645e;border-color:#e4dcd9;background:#fdfaf9}
+.lesson-controls .primary{background:#3268cf;color:white}
+.voice-feedback{position:absolute;bottom:calc(100% + 20px);left:0;max-width:580px;max-height:190px;overflow:auto;background:#fff;border:1px solid #dce5f1;box-shadow:0 4px 18px #223d5e12;border-radius:9px;padding:10px 14px;z-index:5}
+.voice-feedback .voice-transcript{font-size:11px;margin-top:0}.voice-feedback .voice-transcript button{margin-left:7px}
+.classroom-app .sidebar{position:absolute;top:44px;bottom:0;left:0;width:260px;z-index:21;border-right:1px solid #dce5ef;background:#f9fbfd;padding:20px 13px 14px;box-shadow:6px 0 24px #24416415;min-height:0}
+.classroom-app .teachers{max-height:48%}.classroom-app .teacher-item{padding:11px 9px;border-radius:7px}.classroom-app .teacher-item.selected{background:#e7eef8}.classroom-app .avatar{background:#e5ebf3;color:#637d9d}
+.classroom-app .section-nav .active{background:#e8effa}.classroom-app .section-nav button,.classroom-app .sidebar-bottom button{padding:11px 9px;color:#5a708a}
+.navigation-scrim{position:absolute;inset:44px 0 0;border:0;border-radius:0;background:#23385128!important;z-index:20;box-shadow:none}
+.resource-overlay{position:absolute;z-index:6;inset:84px 28px 105px;display:flex;flex-direction:column;background:white;border:1px solid #d9e2ed;border-radius:12px;box-shadow:0 12px 48px #1e365729;overflow:hidden}
+.resource-toolbar{display:flex;justify-content:space-between;align-items:center;padding:15px 20px;gap:12px;border-bottom:1px solid #e8edf4;flex-shrink:0}
+.resource-toolbar>div{display:flex;align-items:center;gap:10px}.resource-toolbar>div:first-child{flex-direction:column;align-items:flex-start;gap:5px}.resource-toolbar strong{font-size:14px}.resource-toolbar button{font-size:11px;min-height:32px;border-radius:6px}
+.resource-overlay .document-view{max-width:none;padding:25px 28px}.resource-overlay .view-heading{margin-bottom:20px}
+.document-open{border:0;padding:0;min-height:0;display:block;text-align:left;background:none;box-shadow:none;color:#3769ab;font-size:12px;white-space:normal;overflow-wrap:anywhere}
+.material-reader{display:flex;flex:1;flex-direction:column;min-height:0;padding:14px 18px;gap:12px}.reader-heading{display:flex;align-items:center;gap:12px}.reader-heading strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:12px}.reader-heading a{font-size:11px;white-space:nowrap}.material-reader iframe{border:1px solid #e1e7ed;border-radius:6px;width:100%;flex:1;background:#f1f3f6}.reader-note{font-size:10px;color:#8d99a8}
+.classroom-app .empty-workspace h2{color:#425d7e}.classroom-app .empty-workspace>svg{color:#9ab0ce}.classroom-app .error{flex-shrink:0;font-size:11px}
+@media(min-width:1600px){.classroom-app .classroom{grid-template-columns:minmax(0,1fr) 370px;padding:20px;gap:20px}.classroom-app .classroom.conversation-collapsed{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:1050px){.classroom-app .classroom{grid-template-columns:minmax(0,1fr) 290px;padding:12px;gap:12px}.classroom-app .board-heading>span{display:none}.classroom-app .board-tools{gap:3px}.classroom-app .board-tools>button{font-size:10px;padding:5px}.classroom-app .lesson-dock{padding:12px 15px;gap:12px}.classroom-app .voice-buttons button,.lesson-controls button{font-size:10px;padding:6px 9px}.lesson-control-label{display:none}}
+@media(max-width:800px){
+  .classroom-app{height:100dvh;min-height:520px;grid-template-columns:minmax(0,1fr);grid-template-rows:42px minmax(0,1fr);overflow:hidden}
+  .classroom-app .windowbar{height:42px}.classroom-app .window-title{display:none}.classroom-app .app-name{margin-left:14px;font-size:14px}.classroom-app.desktop-app .app-name{margin-left:90px}.classroom-app .app-name small{font-size:8px}
+  .navigation-toggle{margin-right:8px;font-size:10px}.classroom-app .main-area{min-height:0}.classroom-app .toolbar{height:65px;min-height:65px;padding:0 12px;gap:8px}.classroom-app .toolbar-title{gap:8px;flex:1;overflow:hidden}.teacher-badge{display:none}.class-title{min-width:0}.class-title h1{font-size:13px!important;max-width:150px}.class-title>span{font-size:9px}.classroom-app .state-pill{font-size:9px;padding:4px 6px;white-space:nowrap}.classroom-app .toolbar-actions{gap:5px}.classroom-app .toolbar-actions>button{font-size:10px;padding:5px 7px;height:30px}.classroom-app .toolbar-actions>button svg{width:13px}.classroom-app .demo-indicator{display:none}
+  .classroom-app .classroom,.classroom-app .classroom.conversation-collapsed{display:grid;grid-template-columns:minmax(0,1fr);padding:8px;gap:0;overflow:hidden;min-height:0;flex:1}
+  .classroom-app .workspace{height:auto;min-height:0;flex-shrink:1}.classroom-app .board-panel{border-radius:9px}.classroom-app .board-toolbar{min-height:48px;height:48px;padding:0 10px}.board-heading h2{font-size:11px!important}.classroom-app .board-actions{width:auto;gap:5px}.classroom-app .board-actions button{font-size:10px;min-height:28px;padding:4px 7px}.classroom-app .exercise-strip{font-size:11px;padding:10px 12px}
+  .classroom-app .board-tools{flex-wrap:nowrap;overflow-x:auto;min-height:45px;padding:5px 7px;gap:3px;scrollbar-width:thin}.classroom-app .board-tools>*{flex-shrink:0}.classroom-app .board-tools>button{min-height:34px;padding:5px 7px;font-size:10px;gap:4px}.classroom-app .board-tools>button svg{width:14px}.classroom-app .board-tools label{font-size:9px;margin-left:5px}.classroom-app .board-tools select{font-size:9px}.classroom-app .board-status{height:27px;font-size:9px}.board-extras{padding:9px;max-height:160px}
+  .classroom-app .conversation{position:absolute;inset:8px 8px 8px auto;width:min(350px,calc(100% - 16px));height:auto;z-index:3;box-shadow:0 5px 35px #1e36572a;border-radius:9px}.classroom-app .chat-header{height:56px}.classroom-app .chat-scroll{padding:18px}.classroom-app .message>div{font-size:12px}.classroom-app .composer textarea{height:48px}
+  .classroom-app .lesson-dock{padding:10px 12px;gap:9px;min-height:0;flex-wrap:wrap;align-items:center}.classroom-app .voice-controls{flex-basis:100%}.classroom-app .voice-buttons{gap:5px;flex-wrap:wrap}.classroom-app .voice-buttons button{font-size:10px;min-height:34px;padding:5px 8px;gap:4px}.classroom-app .voice-buttons button svg{width:14px}.classroom-app .voice-buttons .start-voice{min-width:0}.voice-privacy{font-size:8px;margin-top:5px}.lesson-controls{margin-left:auto;gap:6px}.lesson-controls button{min-height:29px;font-size:10px;padding:4px 10px}.lesson-control-label{display:inline;font-size:9px}.voice-feedback{bottom:calc(100% + 15px);max-width:calc(100vw - 24px);width:100%}
+  .classroom-app .sidebar{top:42px;width:250px;min-height:0}.navigation-scrim{top:42px}.resource-overlay{inset:72px 8px 140px;border-radius:9px}.resource-toolbar{padding:10px 12px;gap:6px}.resource-toolbar button{font-size:10px;padding:4px 6px}.resource-overlay .document-view{padding:20px 15px}.material-reader{padding:10px;gap:8px}.reader-heading{flex-wrap:wrap;gap:7px}.reader-heading strong{order:-1;flex-basis:100%}.reader-note{font-size:9px}
+}
+@media(max-width:430px){.classroom-app .state-pill{display:none}.classroom-app .toolbar-title{flex:1}.class-title h1{max-width:135px}.classroom-app .toolbar-actions>button{gap:4px}.classroom-app .voice-buttons button{padding:5px 6px;gap:3px}}
+
 .observation-entry{padding:6px 12px;border-bottom:1px solid var(--line);flex-shrink:0}.workspace{display:flex;flex-direction:column}.workspace>.board-panel{flex:1;min-height:0;height:auto}.observation-dialog{width:min(1120px,96vw)}.observation-inputs{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:16px 0}.observation-inputs label{display:flex;flex-direction:column;gap:6px;min-width:0}.observation-inputs input{max-width:260px}.observation-comparison{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;margin:18px 0}.observation-image{position:relative;background:#fafafa;border:1px solid #ccc}.observation-image img{display:block;width:100%;height:auto}.observation-image svg{position:absolute;inset:0;width:100%;height:100%}.observation-image rect{stroke:#5878a5;stroke-width:.003;fill:#477caa0a;cursor:pointer}.observation-image rect.selected{stroke:#b37800;fill:#eeb90020}.observation-steps fieldset{border:1px solid #ddd;border-radius:6px;margin-bottom:14px;padding:12px;min-width:0}.observation-steps fieldset.selected{border-color:#b37800}.observation-steps label{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}.observation-steps textarea{width:100%;min-height:65px;resize:vertical}.observation-steps details{margin-bottom:12px}.observation-coordinates{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}.observation-coordinates input{width:100%}.observation-ambiguity{background:#fff8df;padding:12px;margin-top:12px;line-height:1.6}.observation-footer{flex-wrap:wrap;align-items:center}.observation-footer label{display:flex;align-items:center;gap:6px}.observation-dialog [role=status]{color:#596c58;line-height:1.7}@media(max-width:800px){.observation-comparison{grid-template-columns:1fr}.observation-dialog .dialog-body{padding:12px}.observation-inputs{align-items:stretch}.observation-footer button{white-space:normal}}
 
 .observation-image rect.ambiguity{stroke:#b15915;stroke-dasharray:.008 .005;fill:transparent;stroke-width:.004}

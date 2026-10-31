@@ -1,12 +1,15 @@
+import { apiBase } from './environment';
 import { test, expect } from '@playwright/test';
 
 test('student loop, PDF, whiteboard, persistence, pause, next lesson', async ({ page, request }) => {
   const errors: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
-  const existing = await (await request.get('http://127.0.0.1:8100/api/teachers')).json();
-  for (const t of existing) if (t.name.startsWith('Alex E2E') || t.name === 'Alex' || t.name.startsWith('Voice ')) await request.delete(`http://127.0.0.1:8100/api/teachers/${t.id}`);
+  const existing = await (await request.get(`${apiBase}/api/teachers`)).json();
+  for (const t of existing) if (t.name.startsWith('Alex E2E') || t.name === 'Alex' || t.name.startsWith('Voice ')) await request.delete(`${apiBase}/api/teachers/${t.id}`);
   await page.goto('/');
-  await page.getByRole('button', { name: '添加老师', exact: true }).last().click();
+  await expect(page.getByText('正在打开课堂…', { exact: true })).toBeHidden();
+  await page.getByRole('button', { name: '课堂菜单', exact: true }).click();
+  await page.getByRole('button', { name: '添加老师', exact: true }).first().click();
   const name = 'Alex';
   await page.getByLabel('老师姓名').fill(name);
   await page.getByRole('button', { name: '创建并上课' }).click();
@@ -18,7 +21,7 @@ test('student loop, PDF, whiteboard, persistence, pause, next lesson', async ({ 
   await message('Edexcel');
   await page.locator('input[type=file]').setInputFiles('../samples/derivatives.pdf');
   await expect(page.getByText('derivatives.pdf', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '课堂', exact: true }).click();
+  await page.getByRole('button', { name: '返回课堂', exact: true }).click();
   await message('6x+2');
   await message('3x^2+2x');
   await message('12x^2-4x');
@@ -34,13 +37,15 @@ test('student loop, PDF, whiteboard, persistence, pause, next lesson', async ({ 
   await expect(page.getByText('已保存到本机', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '请看这一步' }).click();
   await expect(page.getByText('离线演示不具备视觉识别。', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: '白板更多功能' }).click();
   await page.getByRole('button', { name: '添加老师便签' }).click();
   await expect(page.locator('[data-element-id]')).toHaveCount(2);
+  await page.getByRole('button', { name: '课堂菜单', exact: true }).click();
   await page.getByRole('button', { name: '学习记录', exact: true }).click();
   await expect(page.getByText('链式法则', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '课堂', exact: true }).click();
+  await page.getByRole('button', { name: '返回课堂', exact: true }).click();
   await expect(page.locator('[data-element-id]').first()).toBeInViewport();
-  await page.screenshot({ path: '../docs/desktop-workspace.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/classroom.png', fullPage: true });
   await page.reload();
   await expect(page.locator('.state-pill')).toHaveText('引导练习');
   await expect(page.locator('[data-element-id]')).toHaveCount(2);
@@ -56,9 +61,9 @@ test('student loop, PDF, whiteboard, persistence, pause, next lesson', async ({ 
   await page.getByRole('button', { name: '开始下一节' }).click();
   await expect(page.getByText('上次的学习记录还在。', { exact: false })).toBeVisible();
   expect(errors).toEqual([]);
-  const teachers = await (await request.get('http://127.0.0.1:8100/api/teachers')).json();
+  const teachers = await (await request.get(`${apiBase}/api/teachers`)).json();
   const teacher = teachers.find((t: { name: string }) => t.name === name);
-  await request.delete(`http://127.0.0.1:8100/api/teachers/${teacher.id}`);
+  await request.delete(`${apiBase}/api/teachers/${teacher.id}`);
 });
 
 test('mobile workspace fits viewport', async ({ page }) => {

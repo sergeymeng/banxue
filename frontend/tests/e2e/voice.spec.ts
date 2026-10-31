@@ -1,14 +1,15 @@
+import { apiBase } from './environment';
 import { test, expect } from '@playwright/test';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 
 test.use({ permissions: ['microphone'], launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] } });
 test('voice config missing is explicit and leaves text available', async ({ page, request }) => {
-  const teacher = await (await request.post('http://127.0.0.1:8100/api/teachers', { data: { name: 'Voice E2E' } })).json();
-  await page.goto('/'); await page.getByRole('button', { name: 'Voice E2E A-level 数学' }).click();
+  const teacher = await (await request.post(`${apiBase}/api/teachers`, { data: { name: 'Voice E2E' } })).json();
+  await page.goto('/'); await expect(page.getByTestId('teaching-board')).toBeVisible(); await page.getByRole('button', { name: '课堂菜单', exact: true }).click(); await page.getByRole('button', { name: 'Voice E2E A-level 数学' }).click();
   await page.getByRole('button', { name: '开始语音课堂' }).click();
   await expect(page.locator('.error[role=alert]')).toContainText('请先在设置中配置');
   await expect(page.getByRole('textbox', { name: '给老师的消息' })).toBeEnabled();
-  await request.delete(`http://127.0.0.1:8100/api/teachers/${teacher.id}`);
+  await request.delete(`${apiBase}/api/teachers/${teacher.id}`);
 });
 
 test('bundled VAD detects synthetic speech and pauses native playback; stale frames and cleanup (mock cloud)', async ({ page, request }) => {
@@ -52,8 +53,8 @@ test('bundled VAD detects synthetic speech and pauses native playback; stale fra
     if (JSON.parse(data).type === 'begin') beginAt = Date.now();
     if (JSON.parse(data).ticket) ws.send(JSON.stringify({ type: 'ready' }));
   }); });
-  const teacher = await (await request.post('http://127.0.0.1:8100/api/teachers', { data: { name: 'Voice Runtime E2E' } })).json();
-  await page.goto('/'); await page.getByRole('button', { name: 'Voice Runtime E2E A-level 数学' }).click();
+  const teacher = await (await request.post(`${apiBase}/api/teachers`, { data: { name: 'Voice Runtime E2E' } })).json();
+  await page.goto('/'); await expect(page.getByTestId('teaching-board')).toBeVisible(); await page.getByRole('button', { name: '课堂菜单', exact: true }).click(); await page.getByRole('button', { name: 'Voice Runtime E2E A-level 数学' }).click();
   await page.getByRole('button', { name: '开始语音课堂' }).click();
   await expect(page.getByRole('status').filter({ hasText: '正在听' })).toBeVisible({ timeout: 30000 });
   const send = (event: object) => socket.send(JSON.stringify(event));
@@ -83,5 +84,5 @@ test('bundled VAD detects synthetic speech and pauses native playback; stale fra
   await expect(page.getByRole('button', { name: '开始语音课堂' })).toBeVisible();
   expect(await page.evaluate(() => { const o = (window as unknown as { voiceTest: { tracks: MediaStreamTrack[]; contexts: AudioContext[]; starts: number } }).voiceTest; return { released: o.tracks.every(t => t.readyState === 'ended') && o.contexts.every(c => c.state === 'closed'), starts: o.starts }; })).toEqual({ released: true, starts: count });
   expect(errors).toEqual([]); expect(received.some(e => JSON.parse(e).type === 'stop')).toBe(true);
-  await request.delete(`http://127.0.0.1:8100/api/teachers/${teacher.id}`);
+  await request.delete(`${apiBase}/api/teachers/${teacher.id}`);
 });

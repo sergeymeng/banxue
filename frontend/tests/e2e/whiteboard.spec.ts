@@ -1,8 +1,11 @@
+import { apiBase } from './environment';
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
-const api = 'http://127.0.0.1:8100';
+const api = apiBase;
 async function classroom(page: Page, request: APIRequestContext) {
   await page.goto('/');
-  await page.getByRole('button', { name: '添加老师', exact: true }).last().click();
+  await expect(page.getByText('正在打开课堂…', { exact: true })).toBeHidden();
+  await page.getByRole('button', { name: '课堂菜单', exact: true }).click();
+  await page.getByRole('button', { name: '添加老师', exact: true }).first().click();
   const name = `Board ${Date.now()}`;
   await page.getByLabel('老师姓名').fill(name);
   await page.getByRole('button', { name: '创建并上课' }).click();
@@ -21,6 +24,8 @@ test('shared board: ink, teacher sequence, pause/cancel, undo, region PNG and re
   const teacher = await classroom(page, request);
   try {
     await draw(page); await expect(page.locator('[data-author=student]')).toHaveCount(1);
+    await page.getByRole('button', { name: '白板更多功能' }).click();
+    await page.getByText('开发演示与动作记录', { exact: true }).click();
     await page.getByRole('button', { name: '开发演示：逐步板书' }).click();
     await expect(page.locator('[data-author=teacher]')).toHaveCount(1);
     await page.getByRole('button', { name: '暂停板书', exact: true }).click();
@@ -34,6 +39,7 @@ test('shared board: ink, teacher sequence, pause/cancel, undo, region PNG and re
     await expect(page.locator('[data-author=teacher]')).toHaveCount(5);
     await page.getByRole('button', { name: '重做', exact: true }).click();
     await expect(page.locator('[data-author=teacher]')).toHaveCount(6);
+    await page.getByRole('button', { name: '白板更多功能' }).click();
     await page.getByRole('button', { name: '框选区域', exact: true }).click();
     const box = (await page.getByTestId('teaching-board').boundingBox())!;
     await page.mouse.move(box.x + 10, box.y + 10); await page.mouse.down();
@@ -66,9 +72,13 @@ test('shared board: ink, teacher sequence, pause/cancel, undo, region PNG and re
     await expect(page.getByRole('status')).toContainText('测试桩'); expect(observed).toBe(true);
     await page.getByRole('button', { name: '重试保存' }).click(); await page.reload();
     await expect(page.locator('[data-author=student]')).toHaveCount(1); await expect(page.locator('[data-author=teacher]')).toHaveCount(6);
+    await page.getByRole('button', { name: '白板更多功能' }).click();
+    await page.getByText('开发演示与动作记录', { exact: true }).click();
     await page.getByRole('button', { name: '开发演示：逐步板书' }).click();
     await page.getByRole('button', { name: '暂停板书', exact: true }).click();
     await expect(page.getByRole('status')).toHaveText('已保存到本机'); await page.reload();
+    await page.getByRole('button', { name: '白板更多功能' }).click();
+    await page.getByText('开发演示与动作记录', { exact: true }).click();
     await expect(page.getByTestId('queue-status')).toContainText('已暂停');
     await page.getByRole('button', { name: '取消待执行' }).click();
     await expect(page.getByTestId('queue-status')).toContainText('待执行 0');
