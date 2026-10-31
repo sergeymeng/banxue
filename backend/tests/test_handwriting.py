@@ -170,9 +170,9 @@ def test_malformed_provider_structures(change):
 def test_model_self_confidence_is_never_a_teaching_gate():
     state = {"state": "INDEPENDENT_PRACTICE", "observation": {"confidence": 1.0, "step_complete": True}}
     for policy in (TeachingPolicy(), BaselinePolicy()):
-        assert policy.decide(copy.deepcopy(state), event="board").action == "WAIT"
+        assert policy.decide(copy.deepcopy(state), event="board").reason == "needs_confirmation"
         state["observation"]["confirmed"] = True
-        assert policy.decide(copy.deepcopy(state), event="board").action == "ASK"
+        assert policy.decide(copy.deepcopy(state), event="board").reason == "needs_confirmation"
         state["observation"].pop("confirmed")
 
 

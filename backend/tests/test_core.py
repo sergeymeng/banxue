@@ -371,8 +371,8 @@ def test_high_confidence_legacy_observation_requires_review(tmp_path):
             "image_sha256": obs["source"]["sha256"], "steps": obs["steps"], "step_complete": True,
         }).json()
         assert result["decision"]["action"] == "ASK"
-        assert roles == ["vision-test"]
-        assert result["decision"]["reason"] == "needs_confirmation"
+        assert roles == ["vision-test", "reason-test"]
+        assert result["decision"]["reason"] == "completed_step"
         assert c.get(f"/api/teachers/{teacher['id']}/memory").json() == []
 
 

@@ -81,6 +81,7 @@ def bind_handwriting_observation(db, lesson, s):
     # Use the stored reviewed steps, not an independently supplied compact text.
     s["observation"] = {
         **copy.deepcopy(reviewed),
+        "steps": [copy.deepcopy(step) for step in reviewed.get("steps", []) if step.get("mark") == "active"],
         "id": original.id,
         "source": copy.deepcopy(source),
         "image_sha256": source["sha256"],
