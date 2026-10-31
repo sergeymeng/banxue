@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "assets": "node scripts/copy-assets.mjs",
     "postinstall": "npm run assets",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:voice-sim": "playwright test --config playwright.voice.config.ts"
   },
   "dependencies": {
     "@ricky0123/vad-web": "^0.0.31",

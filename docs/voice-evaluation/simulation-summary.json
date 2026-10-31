@@ -1,0 +1,136 @@
+{
+  "date": "2026-10-31T00:12:06.812Z",
+  "status": "passed",
+  "simulation": true,
+  "provider_verified": false,
+  "physical_echo_verified": false,
+  "human_barge_in_latency_verified": false,
+  "measurement": "Synthetic fixture scheduling to teacher AudioContext.suspend call, performance.now on the same browser clock. Not acoustic speech onset or audible speaker stop.",
+  "cases": [
+    {
+      "name": "real local WS + Qwen adapters: streamed ASR, text, TTS and playback receipts",
+      "status": "passed",
+      "duration_ms": 6464,
+      "injection_to_suspend_ms": [],
+      "max_scheduled_overlap": 1,
+      "uncertain_reservations": 0
+    },
+    {
+      "name": "three natural interruptions cancel old replies; late audio and text stay silent",
+      "status": "passed",
+      "duration_ms": 9615,
+      "injection_to_suspend_ms": [
+        251.7,
+        157.7,
+        161.1
+      ],
+      "max_scheduled_overlap": 1,
+      "uncertain_reservations": 4
+    },
+    {
+      "name": "provisional pause resumes same reply for 嗯。 transcript",
+      "status": "passed",
+      "duration_ms": 5029,
+      "injection_to_suspend_ms": [],
+      "max_scheduled_overlap": 1,
+      "uncertain_reservations": 1
+    },
+    {
+      "name": "provisional pause resumes same reply for empty/noise transcript",
+      "status": "passed",
+      "duration_ms": 4975,
+      "injection_to_suspend_ms": [],
+      "max_scheduled_overlap": 1,
+      "uncertain_reservations": 1
+    },
+    {
+      "name": "thinking pause stays one utterance; ambiguous math waits for explicit confirmation",
+      "status": "passed",
+      "duration_ms": 5359,
+      "injection_to_suspend_ms": [],
+      "max_scheduled_overlap": 1,
+      "uncertain_reservations": 1
+    },
+    {
+      "name": "fault asr_fail: clear error, uncertain reservation, no retry, subsequent typed recovery",
+      "status": "passed",
+      "duration_ms": 4274,
+      "injection_to_suspend_ms": [],
+      "max_scheduled_overlap": 1,
+      "uncertain_reservations": 2
+    },
+    {
+      "name": "fault asr_disconnect: clear error, uncertain reservation, no retry, subsequent typed recovery",
+      "status": "passed",
+      "duration_ms": 4283,
+      "injection_to_suspend_ms": [],
+      "max_scheduled_overlap": 1,
+      "uncertain_reservations": 2
+    },
+    {
+      "name": "fault llm_disconnect: clear error, uncertain reservation, no retry, subsequent typed recovery",
+      "status": "passed",
+      "duration_ms": 2078,
+      "injection_to_suspend_ms": [],
+      "max_scheduled_overlap": 1,
+      "uncertain_reservations": 2
+    },
+    {
+      "name": "fault llm_timeout: clear error, uncertain reservation, no retry, subsequent typed recovery",
+      "status": "passed",
+      "duration_ms": 1994,
+      "injection_to_suspend_ms": [],
+      "max_scheduled_overlap": 1,
+      "uncertain_reservations": 2
+    },
+    {
+      "name": "fault tts_fail: clear error, uncertain reservation, no retry, subsequent typed recovery",
+      "status": "passed",
+      "duration_ms": 2147,
+      "injection_to_suspend_ms": [],
+      "max_scheduled_overlap": 1,
+      "uncertain_reservations": 2
+    },
+    {
+      "name": "fault tts_disconnect: clear error, uncertain reservation, no retry, subsequent typed recovery",
+      "status": "passed",
+      "duration_ms": 2136,
+      "injection_to_suspend_ms": [],
+      "max_scheduled_overlap": 1,
+      "uncertain_reservations": 2
+    },
+    {
+      "name": "disconnect releases capture, playback, connection and backend tasks",
+      "status": "passed",
+      "duration_ms": 1770,
+      "injection_to_suspend_ms": [],
+      "max_scheduled_overlap": 0,
+      "uncertain_reservations": 1
+    },
+    {
+      "name": "device releases capture, playback, connection and backend tasks",
+      "status": "passed",
+      "duration_ms": 1738,
+      "injection_to_suspend_ms": [],
+      "max_scheduled_overlap": 0,
+      "uncertain_reservations": 1
+    },
+    {
+      "name": "leave releases capture, playback, connection and backend tasks",
+      "status": "passed",
+      "duration_ms": 1823,
+      "injection_to_suspend_ms": [],
+      "max_scheduled_overlap": 0,
+      "uncertain_reservations": 1
+    },
+    {
+      "name": "synthetic keyboard and residual echo: observe VAD, recover possible false pauses without new replies",
+      "status": "passed",
+      "duration_ms": 8103,
+      "injection_to_suspend_ms": [],
+      "max_scheduled_overlap": 1,
+      "uncertain_reservations": 0,
+      "false_pause_count": 1
+    }
+  ]
+}

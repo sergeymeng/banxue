@@ -67,6 +67,7 @@ def test_voice_auth_origin_ticket_binding_and_replay(tmp_path):
                 ws.receive_json()
         assert "test-only-secret" not in client.get("/api/voice/config", headers=headers).text
         assert not app.state.voice_sessions
+        assert not any(route.path.startswith("/__simulation") for route in app.routes)
 
 
 def test_missing_prices_and_key_are_not_zero(tmp_path):
@@ -370,3 +371,28 @@ async def test_inapplicable_voice_auto_does_not_replay_old_answer(tmp_path):
         assert not list(db.scalars(select(Usage)))
         assert "delivery" not in db.get(Lesson, lid).data["messages"][-1]
     await session.close()
+
+
+@pytest.mark.parametrize("retain", [True, False])
+async def test_reconnect_restores_completed_and_interrupted_separately(tmp_path, retain):
+    s, app, lid = setup(tmp_path, retain_transcripts=retain)
+    session = VoiceSession(ClientSocket(), lid, s, app.state.factory, asyncio.Lock())
+    session.segments[("first", "1")] = {"text": "已经听完。", "completed": False}
+    session.segments[("first", "2")] = {"text": "只听到了开头。", "completed": False}
+    session.receipt({"turn_id": "first", "segment_id": "1", "status": "completed", "elapsed_ms": 800})
+    session.receipt({"turn_id": "first", "segment_id": "2", "status": "interrupted", "elapsed_ms": 100})
+    await session.close()
+    restored = VoiceSession(ClientSocket(), lid, s, app.state.factory, asyncio.Lock())
+    with app.state.factory() as db:
+        context = restored.context(db.get(Lesson, lid), "继续")
+    assert [item["segment_id"] for item in context["heard_completed"]] == ["1"]
+    assert context["interrupted_at"]["segment_id"] == "2"
+    assert context["interrupted_at"]["elapsed_ms"] == 100
+    assert context["interrupted_at"]["text"] == ("只听到了开头。" if retain else "")
+    # A temporary pause followed by complete playback must not survive as an interruption.
+    session.receipt({"turn_id": "first", "segment_id": "2", "status": "completed", "elapsed_ms": 900})
+    resumed = VoiceSession(ClientSocket(), lid, s, app.state.factory, asyncio.Lock())
+    assert resumed.interrupted is None
+    assert [item["segment_id"] for item in resumed.heard] == ["1", "2"]
+    await restored.close()
+    await resumed.close()

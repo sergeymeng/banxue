@@ -105,7 +105,7 @@ npm test
 
 - [使用与配置](docs/USAGE.md)
 - [桌面版构建](docs/DESKTOP.md)
-- [千问语音接入](docs/QWEN_VOICE.md)
+- [千问语音接入](docs/QWEN_VOICE.md) · [无 Key 语音仿真](docs/VOICE_SIMULATION.md)
 - [评测方法](docs/EVALUATION.md) · [语音验证记录](docs/VOICE_TEST_REPORT.md) · [早期版本测试记录](docs/TEST_REPORT.md)
 
 ## 许可

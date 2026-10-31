@@ -45,7 +45,18 @@ class VoiceSession:
         self.asr_factory, self.tts_factory, self.llm_factory = QwenASR, QwenTTS, QwenLLM
         with factory() as db:
             events = list(db.scalars(select(Event).where(Event.lesson_id == lesson_id).order_by(Event.created_at.desc()).limit(50)))
-            self.heard = [e.data for e in reversed(events) if e.data.get("type") == "voice_playback"][-8:]
+            # Reconstruct delivery, not generation: an interrupted segment was not heard in full.
+            for event in reversed(events):
+                data = event.data
+                if data.get("type") != "voice_playback":
+                    continue
+                key = (data.get("turn_id"), data.get("segment_id"))
+                if data.get("status") == "completed":
+                    self.heard = (self.heard + [data])[-8:]
+                    if self.interrupted and key == (self.interrupted.get("turn_id"), self.interrupted.get("segment_id")):
+                        self.interrupted = None
+                elif data.get("status") == "interrupted":
+                    self.interrupted = data
 
     async def send(self, kind, **data):
         if not self.closed:
@@ -104,7 +115,7 @@ class VoiceSession:
         board_text = whiteboard_text(board)
         return {"new_question": text[:500], "current_exercise": public_lesson(row).get("current_exercise"),
                 "teaching_step": row.data["state"],
-                "interrupted_at": {**self.interrupted, "text": self.interrupted["text"][:240]} if self.interrupted else None,
+                "interrupted_at": {**self.interrupted, "text": (self.interrupted.get("text") or "")[:240]} if self.interrupted else None,
                 "heard_completed": [{**h, "text": (h.get("text") or "")[:200]} for h in self.heard[-2:]],
                 "whiteboard_text": board_text[:2],
                 "whiteboard_observation": str(row.data.get("observation") or "")[:300],
