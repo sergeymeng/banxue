@@ -104,7 +104,7 @@ export default function Whiteboard(props: Props) {
       const result = await api<Turn>(`/api/lessons/${lesson.id}/observe`, { method: 'POST', body: JSON.stringify({ image: exported.image, trigger, step_complete: trigger === 'explicit' }) });
       if (controller.current !== board) return;
       if (result.skipped) setStatus(result.skipped);
-      else { props.onResult(result); setStatus(result.observation ? `可见内容：${result.observation.visible_text || '不清晰'} · 置信度 ${Math.round(result.observation.confidence * 100)}%` : '观察完成'); }
+      else { props.onResult(result); setStatus(result.observation ? '识别结果待核对，请打开原图核对。' : '观察完成'); }
     } catch (error) { if (controller.current === board) props.onError((error as Error).message); }
     finally { observing.current = false; setAnalyzing(false); }
   }
