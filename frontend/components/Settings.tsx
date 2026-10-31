@@ -39,6 +39,6 @@ export default function Settings({ config, mode, onMode, onClose }: { config: Co
     </> : <div className="browser-settings"><h3>模型配置</h3><p>浏览器开发版从 backend/.env 读取配置。桌面应用中可以直接填写。</p>{config && Object.entries(config.roles).map(([r, v]) => <div className="setting-row" key={r}><span>{names[r as keyof typeof names]}</span><code>{v.model}</code></div>)}</div>}
     <details className="advanced"><summary>研究设置</summary><label className="field">新课堂模式<select value={mode} onChange={e => onMode(e.target.value as 'policy' | 'baseline')}><option value="policy">教学策略</option><option value="baseline">普通 LLM 基线</option></select></label><p className="field-help">重新选择老师后生效；同模型比较需要将交流与推理模型设为相同。</p></details>
     {desktop && <button className="text-button data-folder" onClick={() => void window.desktop?.openDataFolder()}><Icon name="folder"/>打开学习数据文件夹</button>}
-    <p className="settings-license">白板使用 tldraw SDK。本版本供本地开发评估，生产使用须遵守其许可。</p>
+    <p className="settings-license">白板使用项目自研 SVG 实现。各依赖保留原许可，详见依赖说明。</p>
   </div><div className="dialog-footer"><button onClick={onClose} disabled={saving}>取消</button>{desktop && <button className="primary" onClick={() => void save()} disabled={saving || !value}>{saving ? '正在应用…' : '保存并应用'}</button>}</div></>;
 }

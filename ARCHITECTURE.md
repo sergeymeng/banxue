@@ -2,7 +2,7 @@
 
 ## 范围与数据流
 
-单用户、本机优先。Next.js/React + tldraw → FastAPI JSON API → 独立 TeachingPolicy → 有界 ContextBuilder → OpenAI-compatible adapter → SQLite。HTTP 请求返回完整教师轮次；SSE 发送开始/完成事件。不做多用户协作；0.3 新增独立的千问流式语音课堂。文字会话是控制通道，白板是工作区。
+单用户、本机优先。Next.js/React + 自研 SVG 白板 → FastAPI JSON API → 独立 TeachingPolicy → 有界 ContextBuilder → OpenAI-compatible adapter → SQLite。HTTP 请求返回完整教师轮次；SSE 发送开始/完成事件。不做多用户协作；0.3 新增独立的千问流式语音课堂。文字会话是控制通道，白板是工作区。
 
 ## 教学控制
 
@@ -21,7 +21,11 @@ MVP 内置范围为 A-level 多项式求导的三个知识点。确定性多项�
 
 ## 白板
 
-tldraw 文档编辑事件本地 debounce 保存；仅用户变更设置 dirty。自动观察默认关闭，启用后停笔 3 秒且距上次视觉请求至少 20 秒才触发；“请看这一步”可显式触发。后端再次检查图像 hash、冷却时间、预算。导出当前页面有限尺寸 PNG，不做定时全屏截图。视觉模型只输出带置信度的可见表达式和观察，不推断学生心理；校验完成步骤后策略选择 WAIT/ASK/HINT。低置信度不评分，视觉结果始终不自动写入能力成绩。教师便签为独立可撤销白板元素。白板快照入库；图像发送模型后不单独持久化。
+自研 SVG 白板采用版本化 JSON 快照；本地编辑与动作队列状态 debounce 保存，写入串行化，保存失败可重试。学生指针书写为黑色，教师受约束动作生成的元素为蓝色，各有稳定 ID 和作者。学生编辑才触发观察门控；自动观察默认关闭，启用后停笔 3 秒且距上次请求至少 20 秒触发。显式“请看这一步”导出学生内容；框选时仅导出选区，PNG 最长边默认不超过 1200。后端保留图像 hash、冷却和预算检查，视觉输出不自动写入能力成绩。
+
+教师动作包括添加 Unicode 公式、文字、笔画、矩形、椭圆圈选、箭头与整元素擦除。执行器先校验完整批次，拒绝未知字段、任意代码、越界几何及跨课堂动作；老师不能擦除学生内容。逐步队列支持暂停/继续/取消及执行回执；恢复时待执行动作保持暂停，撤销不重播动作。教学策略仍在 TeachingPolicy，白板不判断掌握度。`Whiteboard.onReady` 暴露控制器，`onBoardEvent` 通知修订与队列状态；详见 [接口契约](docs/WHITEBOARD_CONTRACT.md)。
+
+本阶段单页 1600 × 1200，可缩放滚动；支持保存恢复、会话内撤销/重做、区域导出。公式为纯 Unicode，不支持 LaTeX。旧 tldraw/未知快照保持只读并可下载；明确新建后保留原文 `legacySnapshot`，不做有损自动迁移。开发演示是本地固定动作，不表示真实模型/手写识别已经接通。选型与限制见 [白板选型](docs/WHITEBOARD_DECISION.md)。
 
 ## 模型与成本
 
@@ -37,7 +41,7 @@ FAST/REASONING/VISION 分别配置 URL、模型、密钥、输入/输出/缓存�
 
 ## 许可
 
-自编代码 MIT；tldraw 5 SDK 单独受 tldraw license 约束。当前组合不是全套宽松许可开源。发布前应取得适用授权或替换白板。见 docs/DEPENDENCIES.md。
+自编代码 MIT；当前 SVG 白板不引入额外依赖，已移除 tldraw SDK。历史构建仍受其原许可约束。其他依赖、桌面运行时和云服务保留各自条款，不能宣称所有依赖为 MIT。见 docs/DEPENDENCIES.md。
 
 ## 桌面应用（0.2）
 
@@ -49,13 +53,13 @@ Electron 主进程管理一个打包后的 Python 服务，Next.js 通过 `outpu
 
 数据路径：macOS `~/Library/Application Support/Banxue/learning`，与此前 Docker volume 和 backend/data 开发数据独立。没有未经请求自动迁移或删除旧数据。应用退出会终止它启动的服务。桌面 UI 使用系统字体、紧凑工具栏与独立教材/记录/用量页面，保留现有教学策略和教师语言逻辑。
 
-打包范围：本机生成并验证 macOS Apple Silicon .app。没有 Developer ID 签名/Apple 公证，尚未在 Windows/Intel Mac 验证。tldraw 许可边界不因桌面打包而改变；此构建用于本地开发评估。
+打包范围：本机生成并验证 macOS Apple Silicon .app。没有 Developer ID 签名/Apple 公证，尚未在 Windows/Intel Mac 验证。历史 tldraw 构建的许可边界不因桌面打包而改变；当前前端已替换为自研 SVG 白板。
 
 
 ## 千问云端语音课堂（0.3）
 
 本地 AudioWorklet + Silero VAD → 课堂票据 WebSocket → Qwen ASR（inference 二进制 PCM）→ 原 `service.turn` / TeachingPolicy / 有界上下文 → Qwen 文本 SSE → 分句队列 → Qwen TTS（realtime JSON/PCM）→ 独立老师播放 AudioContext。业务层不包含供应商事件协议，适配器可替换。
 
-插话候选先本地 gain 静音并暂停播放时钟，麦克风继续监听；原 TTS 消费暂缓。ASR 完成后空结果/白名单短应答恢复队列，实质问题取消旧轮和旧任务。每个回复与句段有独立 ID，客户端和服务器同时拒绝过期结果。按句段完成回执记录已播放内容，打断位置为近似毫秒边界。未播放内容不触发自动推进，也不能构成评分证据。没有自主板书动作队列，保留未来暂停/取消契约。
+插话候选先本地 gain 静音并暂停播放时钟，麦克风继续监听；原 TTS 消费暂缓。ASR 完成后空结果/白名单短应答恢复队列，实质问题取消旧轮和旧任务。每个回复与句段有独立 ID，客户端和服务器同时拒绝过期结果。按句段完成回执记录已播放内容，打断位置为近似毫秒边界。未播放内容不触发自动推进，也不能构成评分证据。白板已有独立暂停/取消动作接口；本分支尚未将语音播放回执与板书执行自动绑定。
 
 语音配置独立于既有文字/视觉配置，复用 safeStorage、课堂数据库和 GBP 预算。ASR 以秒、TTS 以字符预留，取消/超时不释放不确定支出；不重试付费调用。WebSocket 独立验证来源、一次性身份票据及课堂绑定；HTTP 中间件不能代替该验证。详细协议、官方价格依据、限制与复测步骤见 `docs/QWEN_VOICE.md`。

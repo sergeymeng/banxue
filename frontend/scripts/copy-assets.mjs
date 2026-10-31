@@ -1,9 +1,6 @@
-import { cp, mkdir } from 'node:fs/promises';
-await mkdir('public/tldraw', { recursive: true });
-for (const dir of ['fonts','icons','translations','embed-icons']) {
-  try { await cp(`node_modules/@tldraw/assets/${dir}`, `public/tldraw/${dir}`, { recursive: true }); }
-  catch (error) { if (error.code !== 'ENOENT') throw error; }
-}
+import { cp, mkdir, rm } from 'node:fs/promises';
+// Remove only the former generated SDK asset directory when upgrading an existing checkout.
+await rm('public/tldraw', { recursive: true, force: true });
 
 // Bundle VAD model, worklet and ONNX runtime locally: no CDN or microphone data leaves via VAD.
 await mkdir('public/voice', { recursive: true });

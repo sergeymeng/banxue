@@ -8,7 +8,7 @@ Status: phase-one interface; owned by `codex/teaching-board`. No live model or h
 
 One local classroom shares a 1600 × 1200 board, origin top-left, x rightwards/y downwards. This is not a multi-user network protocol. Students use pointer input (mouse, touch, pen); teachers use actions. Each element has a stable ID, author (`student`/`teacher`) and, for teacher elements, source action ID. Teacher actions cannot erase student work. An explicit local student eraser may erase either author's element. Student edits alone dirty the observation gate.
 
-Text and formulas are plain Unicode strings. Formula v1 renders mathematical Unicode (e.g. `f′(x) = 3x² + 2x`); it does not parse LaTeX or execute expressions. Coordinates and text lengths are bounded. Future formula formats require a versioned extension.
+Text and formulas are plain Unicode strings. Formula v1 renders mathematical Unicode (e.g. `f′(x) = 3x² + 2x`); it does not parse LaTeX or execute expressions. Coordinates and text lengths are bounded. Limits: 100 actions/batch, 1,000 receipt entries, 1,000 visible elements, 5,000 used element IDs, 2,048 points/stroke, 400 characters/8 source lines per text, plus a conservative serialized snapshot budget below the existing backend 5 MB limit. Future formula formats require a versioned extension.
 
 ## Batches, actions and execution
 
