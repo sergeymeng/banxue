@@ -56,3 +56,13 @@ it('ignores other lessons, preserves manual pause and student work', () => {
   expect(board.getQueue().state).toBe('paused');
   expect(board.getSnapshot().elements[0].id).toBe('ink');
 });
+it('ignores stale sessions and cancelled turn events after a new voice reply starts', () => {
+  const {bridge, board} = setup();
+  bridge.voice({type: 'state_changed', state: 'connecting', lesson_id: 'class', session_id: 'new', sequence: 1});
+  bridge.voice({type: 'turn_started', lesson_id: 'class', session_id: 'new', turn_id: 'current', sequence: 2});
+  bridge.voice({type: 'turn_cancelled', lesson_id: 'class', session_id: 'old', turn_id: 'old', sequence: 99});
+  bridge.voice({type: 'turn_cancelled', lesson_id: 'class', session_id: 'new', turn_id: 'previous', sequence: 3});
+  bridge.voice({type: 'candidate_paused', lesson_id: 'class', session_id: 'new', turn_id: 'current', sequence: 2});
+  expect(board.getQueue().steps.every(s => s.status === 'pending')).toBe(true);
+  expect(board.getQueue().state).toBe('running');
+});

@@ -102,6 +102,7 @@ export default function ObservationReview({ lesson, disabled, live, onResult, on
   return <div className="observation-entry">
     <button onClick={() => setOpen(true)}>核对步骤{lesson.pending_observation_id ? ' · 待确认' : ''}</button>
     {open && <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-labelledby="observation-title" className="dialog observation-dialog" onKeyDown={e => {
+        e.stopPropagation();
         if (e.key === 'Escape' && !busy) setOpen(false);
         if (e.key === 'Tab') {
           const focusable = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary')).filter(el => el.getClientRects().length);

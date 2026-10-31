@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState, type PointerEvent } from 'react';
+import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { api, Lesson, Turn } from '@/lib/api';
 import { prepareStudentRegion, submitRegion } from '@/lib/handwriting';
 import { ObservationGate } from '@/lib/observation-gate';
@@ -13,6 +13,7 @@ import BoardGlyph from './BoardGlyph';
 type Props = {
   lesson: Lesson; onResult: (result: Turn) => void; onError: (message: string) => void;
   annotation: string; disabled: boolean; live: boolean;
+  reviewControl?: ReactNode;
   onReady?: (controller: BoardController | null) => void; onBoardEvent?: (event: BoardEvent) => void;
 };
 type Tool = 'pen' | 'eraser' | 'region' | 'pan';
@@ -175,6 +176,7 @@ export default function Whiteboard(props: Props) {
   }}>
     <div className="board-toolbar"><div className="board-heading"><h2>解题白板</h2><span>黑色是你的步骤 · 蓝色是老师板书</span></div><div className="board-actions">
       <button className="observe-step" disabled={analyzing || disabled || legacy} onClick={() => void observe('explicit')}>{analyzing ? '正在观察…' : '请看这一步'}</button>
+      {props.reviewControl}
       <button aria-expanded={extras} aria-label="白板更多功能" onClick={() => setExtras(value => !value)}>更多</button>
     </div></div>
     {lesson.current_exercise && <div className="exercise-strip"><span>题目</span>{lesson.current_exercise}</div>}
