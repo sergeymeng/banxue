@@ -1,6 +1,5 @@
 {
   "stimulus": "macOS Tingting synthetic Chinese speech injected into MediaStream; mock cloud; no physical microphone/speaker",
-  "injection_to_observed_begin_ms": 117,
-  "local_metric": "最近 VAD 确认回调 → 本地静音指令：0.2 ms。另含约 96 ms 连续语音帧确认；不含设备采集、模型推理与扬声器延迟，不代表开口到停声已达到 300 ms。",
+  "injection_to_observed_begin_ms": 140,
   "physical_onset_to_speaker_stop_ms": null
 }
