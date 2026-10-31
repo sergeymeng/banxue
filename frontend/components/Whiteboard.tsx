@@ -6,6 +6,7 @@ import { BoardEngine, HEIGHT, WIDTH } from '@/lib/whiteboard/engine';
 import { exportBoard, path, textLines } from '@/lib/whiteboard/render';
 import { demoBatch } from '@/lib/whiteboard/demo';
 import type { BoardController, BoardEvent, BoardSnapshot, Point, Region } from '@/lib/whiteboard/types';
+import Icon from './Icon';
 import BoardGlyph from './BoardGlyph';
 
 type Props = {
@@ -13,7 +14,7 @@ type Props = {
   annotation: string; disabled: boolean; live: boolean;
   onReady?: (controller: BoardController | null) => void; onBoardEvent?: (event: BoardEvent) => void;
 };
-type Tool = 'pen' | 'eraser' | 'region';
+type Tool = 'pen' | 'eraser' | 'region' | 'pan';
 function download(url: string, filename: string) { const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); }
 function bounds(points: Point[]): Region {
   const x = Math.min(...points.map(p => p.x)), y = Math.min(...points.map(p => p.y));
@@ -33,8 +34,10 @@ export default function Whiteboard(props: Props) {
   const [status, setStatus] = useState('自动保存');
   const [tool, setTool] = useState<Tool>('pen');
   const [draft, setDraft] = useState<Point[]>([]), [selection, setSelection] = useState<Region>();
-  const [zoom, setZoom] = useState(1);
-  const pointer = useRef<{ id: number; points: Point[] } | null>(null);
+  const [zoom, setZoom] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches ? 2 : 1);
+  const [extras, setExtras] = useState(false);
+  const scroll = useRef<HTMLDivElement | null>(null);
+  const pointer = useRef<{ id: number; points: Point[]; tool: Tool; client: Point; scroll: Point } | null>(null);
   const svg = useRef<SVGSVGElement | null>(null);
   const gate = useRef(new ObservationGate()), observing = useRef(false);
   const observeRef = useRef<() => void>(() => {});
@@ -126,24 +129,27 @@ export default function Whiteboard(props: Props) {
   }
   function start(event: PointerEvent<SVGSVGElement>) {
     if (!engine.current || pointer.current || event.button !== 0) return;
-    event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId);
-    const p = position(event); pointer.current = { id: event.pointerId, points: [p] };
+    event.preventDefault(); event.currentTarget.focus({ preventScroll: true }); event.currentTarget.setPointerCapture(event.pointerId);
+    const p = position(event); pointer.current = { id: event.pointerId, points: [p], tool, client: { x: event.clientX, y: event.clientY }, scroll: { x: scroll.current?.scrollLeft ?? 0, y: scroll.current?.scrollTop ?? 0 } };
     if (tool === 'eraser') eraseAt(event);
     else if (tool === 'region') setSelection(undefined);
-    else setDraft([p]);
+    else if (tool === 'pen') setDraft([p]);
   }
   function move(event: PointerEvent<SVGSVGElement>) {
     const current = pointer.current; if (!current || current.id !== event.pointerId) return;
-    if (tool === 'eraser') { eraseAt(event); return; }
+    if (current.tool === 'pan') {
+      scroll.current?.scrollTo(current.scroll.x - event.clientX + current.client.x, current.scroll.y - event.clientY + current.client.y); return;
+    }
+    if (current.tool === 'eraser') { eraseAt(event); return; }
     const p = position(event);
-    if (tool === 'region') { current.points = [current.points[0], p]; setSelection(bounds(current.points)); }
+    if (current.tool === 'region') { current.points = [current.points[0], p]; setSelection(bounds(current.points)); }
     else if (current.points.length < 2047) { current.points.push(p); setDraft([...current.points]); }
   }
   function finish(event: PointerEvent<SVGSVGElement>, cancelled = false) {
     const current = pointer.current; if (!current || current.id !== event.pointerId) return;
     pointer.current = null; setDraft([]);
-    if (cancelled) { if (tool === 'region') setSelection(undefined); return; }
-    if (tool === 'pen') {
+    if (cancelled) { if (current.tool === 'region') setSelection(undefined); return; }
+    if (current.tool === 'pen') {
       current.points.push(position(event));
       safely(() => engine.current?.addStudent({ ...bounds(current.points), id: `student-${crypto.randomUUID()}`, author: 'student', kind: 'stroke', points: current.points }));
     }
@@ -160,24 +166,29 @@ export default function Whiteboard(props: Props) {
   const queue = snapshot?.queue;
   const pending = queue?.steps.filter(s => s.status === 'pending').length ?? 0;
   const executed = queue?.steps.filter(s => s.status === 'executed').length ?? 0;
-  return <section className="board-panel">
-    <div className="board-toolbar"><h2>白板</h2><div className="board-actions">
-      <label className="checkbox-row" title={live ? '停笔三秒后按需观察，最短间隔二十秒' : '连接真实视觉模型后可用'}><input type="checkbox" checked={auto && live} disabled={!live || legacy} onChange={e => setAuto(e.target.checked)} />自动观察</label>
-      <button disabled={!annotation || disabled || legacy} onClick={addNote}>添加老师便签</button>
-      <button disabled={analyzing || disabled || legacy} onClick={() => void observe('explicit')}>{analyzing ? '正在观察…' : '请看这一步'}</button>
+  return <section className="board-panel" onKeyDown={event => {
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLTextAreaElement) return;
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); safely(() => event.shiftKey ? controller.current?.redo() : controller.current?.undo()); }
+    if (!event.metaKey && !event.ctrlKey && !event.altKey) { const keys: Record<string, Tool> = { p: 'pen', e: 'eraser', v: 'region', h: 'pan' }; if (keys[event.key.toLowerCase()]) setTool(keys[event.key.toLowerCase()]); }
+  }}>
+    <div className="board-toolbar"><div className="board-heading"><h2>解题白板</h2><span>黑色是你的步骤 · 蓝色是老师板书</span></div><div className="board-actions">
+      <button className="observe-step" disabled={analyzing || disabled || legacy} onClick={() => void observe('explicit')}>{analyzing ? '正在观察…' : '请看这一步'}</button>
+      <button aria-expanded={extras} aria-label="白板更多功能" onClick={() => setExtras(value => !value)}>更多</button>
     </div></div>
     {lesson.current_exercise && <div className="exercise-strip"><span>题目</span>{lesson.current_exercise}</div>}
     {legacy ? <div className="board-legacy"><p>这是旧版或无法读取的白板快照。原始数据保持不变；新版暂不支持完整呈现。</p><button onClick={exportLegacy}>下载原始快照</button><button onClick={() => setRestart(n => n + 1)}>保留原始快照并新建白板</button></div> : <>
       <div className="board-tools" role="toolbar" aria-label="白板工具">
-        {([['pen', '书写'], ['eraser', '整笔擦除'], ['region', '框选区域']] as const).map(([value, label]) => <button key={value} aria-pressed={tool === value} onClick={() => setTool(value)}>{label}</button>)}
-        <button disabled={!engine.current?.canUndo} onClick={() => safely(() => controller.current?.undo())}>撤销</button>
-        <button disabled={!engine.current?.canRedo} onClick={() => safely(() => controller.current?.redo())}>重做</button>
-        <button onClick={() => void exportImage()}>{selection ? '导出选区' : '导出整板'}</button>
+        {([['pen', '书写', 'pen'], ['eraser', '整笔擦除', 'eraser'], ['region', '框选区域', 'selection'], ['pan', '移动画布', 'hand']] as const).map(([value, label, icon]) => <button key={value} aria-pressed={tool === value} onClick={() => setTool(value)} title={label}><Icon name={icon}/>{label}</button>)}
+        <button disabled={!engine.current?.canUndo} onClick={() => safely(() => controller.current?.undo())}><Icon name="undo"/>撤销</button>
+        <button disabled={!engine.current?.canRedo} onClick={() => safely(() => controller.current?.redo())}><Icon name="redo"/>重做</button>
+        {selection && <button onClick={() => void exportImage()}>导出选区</button>}
         {selection && <button onClick={() => setSelection(undefined)}>清除选区</button>}
         <label>缩放 <select aria-label="白板缩放" value={zoom} onChange={e => setZoom(Number(e.target.value))}><option value={1}>适应宽度</option><option value={1.5}>150%</option><option value={2}>200%</option></select></label>
-        <span className="board-legend">黑色·学生　蓝色·老师</span>
+
       </div>
-      <div className="board-queue">
+      {extras && <div className="board-extras">
+        <div className="board-extra-actions"><button disabled={!annotation || disabled} onClick={addNote}>添加老师便签</button><button onClick={() => void exportImage()}>{selection ? '导出当前选区' : '导出整板'}</button><label className="checkbox-row" title={live ? '停笔三秒后按需观察，最短间隔二十秒' : '连接真实视觉模型后可用'}><input type="checkbox" checked={auto && live} disabled={!live} onChange={e => setAuto(e.target.checked)}/>自动观察</label></div>
+        <details className="board-development"><summary>开发演示与动作记录</summary><div className="board-queue">
         <button disabled={disabled || pending > 0} onClick={() => safely(() => controller.current?.enqueue(demoBatch(lesson.id)))}>开发演示：逐步板书</button>
         <span>本地固定动作，无模型/手写识别</span>
         <button disabled={queue?.state !== 'running'} onClick={() => safely(() => controller.current?.pause())}>暂停板书</button>
@@ -185,9 +196,12 @@ export default function Whiteboard(props: Props) {
         <button disabled={!pending} onClick={() => safely(() => controller.current?.cancel())}>取消待执行</button>
         <span data-testid="queue-status">{queue?.state === 'running' ? '执行中' : queue?.state === 'paused' ? '已暂停' : '空闲'} · 已执行 {executed} · 待执行 {pending}</span>
         {!!queue?.steps.length && <details><summary>动作记录</summary><ol>{queue.steps.map(s => <li key={s.action.id}>{s.action.type} · {s.status} {s.executedRevision !== undefined ? `· 修订 ${s.executedRevision}` : ''}{s.error ? ` · ${s.error}` : ''}</li>)}</ol></details>}
-      </div>
-      <div className="canvas board-scroll"><svg ref={svg} className="teaching-board" data-testid="teaching-board" aria-label="课堂白板，黑色为学生书写，蓝色为老师板书" role="img" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} style={{ width: `${zoom * 100}%` }} onPointerDown={start} onPointerMove={move} onPointerUp={e => finish(e)} onPointerCancel={e => finish(e, true)} onLostPointerCapture={e => finish(e, true)}>
+      </div></details></div>}
+      <div ref={scroll} className={`canvas board-scroll board-tool-${tool}`}><svg ref={svg} className="teaching-board" data-testid="teaching-board" aria-label="课堂白板，黑色为学生书写，蓝色为老师板书" role="img" tabIndex={0} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} style={{ width: `${zoom * 100}%` }} onPointerDown={start} onPointerMove={move} onPointerUp={e => finish(e)} onPointerCancel={e => finish(e, true)} onLostPointerCapture={e => finish(e, true)}>
+        <defs><pattern id={`board-dots-${lesson.id}`} width="32" height="32" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#e9edf2"/></pattern></defs>
         <rect width={WIDTH} height={HEIGHT} fill="white" />
+        <rect width={WIDTH} height={HEIGHT} fill={`url(#board-dots-${lesson.id})`} pointerEvents="none"/>
+        {!snapshot?.elements.length && !draft.length && <g pointerEvents="none" fill="#8e9aab" fontFamily="sans-serif"><text x="80" y="110" fontSize="30">在这里写下你的第一步</text><text x="80" y="155" fontSize="22">直接用笔、触摸或鼠标书写。写好后，点「请看这一步」。</text></g>}
         {snapshot?.elements.map(e => <BoardGlyph key={e.id} element={e} />)}
         {!!draft.length && <path d={path(draft)} fill="none" stroke="#242424" strokeWidth={3} strokeLinecap="round" pointerEvents="none" />}
         {selection && <rect {...selection} fill="#3268cf10" stroke="#3268cf" strokeWidth={2} strokeDasharray="8 6" pointerEvents="none" />}

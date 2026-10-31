@@ -1,6 +1,15 @@
 import type { CSSProperties } from 'react';
-type Name = 'board' | 'book' | 'history' | 'settings' | 'plus' | 'chevron' | 'upload' | 'export' | 'close' | 'pause' | 'play' | 'send' | 'folder' | 'cost' | 'teacher';
+type Name = 'menu' | 'chat' | 'mic' | 'pen' | 'eraser' | 'selection' | 'undo' | 'redo' | 'hand' | 'board' | 'book' | 'history' | 'settings' | 'plus' | 'chevron' | 'upload' | 'export' | 'close' | 'pause' | 'play' | 'send' | 'folder' | 'cost' | 'teacher';
 const paths: Record<Name, React.ReactNode> = {
+  menu: <path d="M4 6h16M4 12h16M4 18h16"/>,
+  chat: <path d="M21 14a3 3 0 0 1-3 3H9l-6 4V6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3Z"/>,
+  mic: <><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/></>,
+  pen: <><path d="m15 3 6 6-12 12H3v-6Z M12 6l6 6M3 15l6 6"/></>,
+  eraser: <><path d="m14 3 7 7-11 11H6l-5-5ZM7 10l7 7M10 21h12"/></>,
+  selection: <path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>,
+  undo: <path d="M3 10h11a6 6 0 0 1 0 12M8 5l-5 5 5 5"/>,
+  redo: <path d="M21 10H10a6 6 0 0 0 0 12m6-17 5 5-5 5"/>,
+  hand: <path d="M8 11V5a2 2 0 0 1 4 0v6-8a2 2 0 0 1 4 0v8-5a2 2 0 0 1 4 0v9c0 5-3 7-7 7-3 0-5-2-7-5l-3-5a2 2 0 0 1 3-2l2 2"/>,
   board: <><rect x="3" y="3" width="18" height="13" rx="1"/><path d="m8 21 4-5 4 5M7 8h10M7 11h6"/></>,
   book: <><path d="M12 5v15M3 4h5a4 4 0 0 1 4 2 4 4 0 0 1 4-2h5v15h-5a5 5 0 0 0-4 1 5 5 0 0 0-4-1H3Z"/></>,
   history: <><path d="M3 11a9 9 0 1 1 2.5 7M3 4v7h7M12 7v5l3 2"/></>,

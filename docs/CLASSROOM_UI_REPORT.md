@@ -1,0 +1,43 @@
+# 课堂界面与直接书写交付记录
+
+日期：2026-10-31。分支：`codex/teaching-board`。本轮接续 `d0cf034`，未合并其他分支或 main，未改后端教学、识别或模型逻辑。
+
+## 本轮完成
+
+- 默认进入中央白板，桌面右侧是可收起的老师讲解。窄屏默认收起讲解，展开后为同一课堂内的浮层。
+- 固定底栏提供开始/结束语音、麦克风静音、立即停止老师、课堂暂停/继续/结束。所有语音状态和操作直接来自既有 `useVoice`，未伪造视频、在线状态或云端成功。
+- 教师切换、教材、学习记录、用量和设置保留在课堂菜单中。教材、学习记录和用量在课堂内浮层打开；白板不卸载，教材查看不自动结束语音。
+- PDF 可在原课堂内预览、下载和返回。沿用已有本机 `/api/teachers/:id/export` 读取原始 PDF，选出目标文档后生成 Blob URL；关闭时取消请求并释放 URL。**接入建议：总协调后续可改为单文档文件接口，避免教材数量多时读取整位老师的导出数据。** 本分支未扩大到后端 API 修改。
+- 白板常用工具明确展示：书写、整笔擦除、框选、移动画布、撤销/重做和缩放；选区存在时显示导出选区。移动工具支持触摸拖动并不生成笔画。窄屏默认 200% 便于阅读，工具栏可横向滑动。
+- 白板获得焦点后支持 Ctrl/Cmd+Z、Shift+Ctrl/Cmd+Z；P/E/V/H 切换书写/擦除/选区/移动。工具状态固定于当前指针手势，取消触摸不提交笔画。
+- 便签、整板导出和自动观察收进“更多”；开发演示和动作记录进一步折叠。默认界面不占用开发动作队列空间。
+- `onReady` / `onBoardEvent` 契约保留。页面用 `onReady` 保存控制器引用，仅用于切换老师、结束课堂和导出前等待 `flush()`。语音到板书、识别到教学接线由总协调处理；未重实现 ObservationReview。
+
+## 验证
+
+| 检查 | 结果 |
+|---|---|
+| `npm run typecheck` | 通过 |
+| `npm test` | 23 passed |
+| `npm run build` | Next 静态生产构建通过 |
+| `E2E_FRONTEND_PORT=3127 E2E_BACKEND_PORT=8127 npm run test:e2e` | 9 passed |
+| 完整 Chromium 的桌面/PDF 路径专项复测 | 1 passed，实际查看 PDF 内容截图 |
+
+E2E 使用单后端 worker，数据目录 `backend/data/e2e-8127`。默认配置仍保留 3100/8100 和 `data/e2e`，新增端口环境变量供多个 worktree 并行验证；不复用或终止别人的服务。
+
+测试覆盖桌面讲解栏收起/展开、PDF 查看/返回、教师切换后的快照恢复、键盘撤销重做、窄屏底栏可见、200% 缩放下实际保存坐标与 SVG 逆变换一致、触摸拖动不误写、既有白板导出与队列、旧快照保护，以及既有课堂/语音模拟回归。
+
+浏览器默认 headless-shell 不提供完整 PDF 阅读器，首次截图显示空白容器。课堂壳专项改为完整 Chromium，重新检查并确认实际页面渲染。PDF 实现使用浏览器内置阅读器，未增加 PDF 库。未重新打包 Electron，也未声称完成真实麦克风、压感笔或真实 Qwen 调用验证。
+
+## 截图
+
+以下均为测试老师、仓库示例 PDF 与明确的固定板书演示，不含真实学生资料。四张截图均已实际查看。
+
+- [桌面课堂](classroom-ui/desktop.png)：1440 × 1000，默认中央白板、讲解栏与固定底栏。
+- [窄屏书写](classroom-ui/narrow.png)：390 × 844，默认直接书写，底栏可见。
+- [窄屏讲解](classroom-ui/narrow-explanation.png)：讲解作为可关闭浮层，白板保持挂载。
+- [课堂内教材预览](classroom-ui/materials.png)：完整 Chromium 实际渲染仓库 `samples/derivatives.pdf`。
+
+## 集成文件
+
+重点是 `frontend/app/page.tsx`、`frontend/app/globals.css`、`frontend/components/Whiteboard.tsx`、`VoiceControls.tsx`、`MaterialReader.tsx` 和 `Icon.tsx`。总协调合入其他前端分支时，保留这里的课堂壳/底栏，并将其新增识别审阅和语音板书接线放进对应区域即可。没有修改 `use-voice.ts` 或供应商协议。
