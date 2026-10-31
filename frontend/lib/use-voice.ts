@@ -1,9 +1,11 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Lesson, Turn } from './api';
+import { VoiceEventHub } from './voice-events';
 import { VoiceClient, type VoiceState } from './voice-client';
 
 export function useVoice(lesson: Lesson | null, available: boolean, receive: (r: Turn) => void, error: (s: string) => void) {
+  const [events] = useState(() => new VoiceEventHub());
   const client = useRef<VoiceClient | null>(null);
   const [state, setState] = useState<VoiceState>('off');
   const [transcript, setTranscript] = useState('');
@@ -12,7 +14,7 @@ export function useVoice(lesson: Lesson | null, available: boolean, receive: (r:
   const [confirmation, setConfirmation] = useState('');
   const [muted, setMuted] = useState(false);
   const [latency, setLatency] = useState<number>();
-  const stop = useCallback(async () => { const current = client.current; client.current = null; setState('off'); setText(''); setConfirmation(''); setMuted(false); await current?.close(); }, []);
+  const stop = useCallback(async () => { const current = client.current; setState('off'); setText(''); setConfirmation(''); setMuted(false); await current?.close(); if (client.current === current) client.current = null; }, []);
   useEffect(() => { if (!available || lesson?.state === 'SESSION_SUMMARY' || lesson?.paused) void stop(); }, [available, lesson?.state, lesson?.paused, stop]);
   useEffect(() => () => { void stop(); }, [lesson?.id, stop]);
   const start = async () => {
@@ -27,9 +29,10 @@ export function useVoice(lesson: Lesson | null, available: boolean, receive: (r:
       error: value => { if (client.current === next) error(value); },
       metric: value => { if (client.current === next) setLatency(value); },
     });
+    next.subscribe(event => { if (client.current === next) events.publish(event); });
     client.current = next; await next.start();
   };
-  return { state, transcript, final, text, muted, latency, confirmation, confirm: () => client.current?.confirm(), active: state !== 'off', start, stop,
+  return { subscribe: events.subscribe, state, transcript, final, text, muted, latency, confirmation, confirm: () => client.current?.confirm(), active: state !== 'off', start, stop,
     send: (message: string, event: string) => client.current?.text(message, event),
     toggleMute: () => { client.current?.mute(!muted); setMuted(!muted); },
     stopTeacher: () => client.current?.stopTeacher(), resume: () => client.current?.resumeTeacher() };
