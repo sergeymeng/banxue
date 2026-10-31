@@ -174,14 +174,8 @@ export default function Whiteboard(props: Props) {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); safely(() => event.shiftKey ? controller.current?.redo() : controller.current?.undo()); }
     if (!event.metaKey && !event.ctrlKey && !event.altKey) { const keys: Record<string, Tool> = { p: 'pen', e: 'eraser', v: 'region', h: 'pan' }; if (keys[event.key.toLowerCase()]) setTool(keys[event.key.toLowerCase()]); }
   }}>
-    <div className="board-toolbar"><div className="board-heading"><h2>解题白板</h2><span>黑色是你的步骤 · 蓝色是老师板书</span></div><div className="board-actions">
-      <button className="observe-step" disabled={analyzing || disabled || legacy} onClick={() => void observe('explicit')}>{analyzing ? '正在观察…' : '请看这一步'}</button>
-      {props.reviewControl}
-      <button aria-expanded={extras} aria-label="白板更多功能" onClick={() => setExtras(value => !value)}>更多</button>
-    </div></div>
-    {lesson.current_exercise && <div className="exercise-strip"><span>题目</span>{lesson.current_exercise}</div>}
-    {legacy ? <div className="board-legacy"><p>这是旧版或无法读取的白板快照。原始数据保持不变；新版暂不支持完整呈现。</p><button onClick={exportLegacy}>下载原始快照</button><button onClick={() => setRestart(n => n + 1)}>保留原始快照并新建白板</button></div> : <>
-      <div className="board-tools" role="toolbar" aria-label="白板工具">
+    <div className="board-toolbar">{!legacy && <div className="board-tools" role="toolbar" aria-label="白板工具">
+
         {([['pen', '书写', 'pen'], ['eraser', '整笔擦除', 'eraser'], ['region', '框选区域', 'selection'], ['pan', '移动画布', 'hand']] as const).map(([value, label, icon]) => <button key={value} aria-pressed={tool === value} onClick={() => setTool(value)} title={label}><Icon name={icon}/>{label}</button>)}
         <button disabled={!engine.current?.canUndo} onClick={() => safely(() => controller.current?.undo())}><Icon name="undo"/>撤销</button>
         <button disabled={!engine.current?.canRedo} onClick={() => safely(() => controller.current?.redo())}><Icon name="redo"/>重做</button>
@@ -189,7 +183,13 @@ export default function Whiteboard(props: Props) {
         {selection && <button onClick={() => setSelection(undefined)}>清除选区</button>}
         <label>缩放 <select aria-label="白板缩放" value={zoom} onChange={e => setZoom(Number(e.target.value))}><option value={1}>适应宽度</option><option value={1.5}>150%</option><option value={2}>200%</option></select></label>
 
-      </div>
+      </div>}<div className="board-actions">
+      <button className="observe-step" disabled={analyzing || disabled || legacy} onClick={() => void observe('explicit')}>{analyzing ? '正在观察…' : '请看这一步'}</button>
+      {props.reviewControl}
+      <button aria-expanded={extras} aria-label="白板更多功能" onClick={() => setExtras(value => !value)}>更多</button>
+    </div></div>
+    {lesson.current_exercise && <div className="exercise-strip"><span>题目</span>{lesson.current_exercise}</div>}
+    {legacy ? <div className="board-legacy"><p>这是旧版或无法读取的白板快照。原始数据保持不变；新版暂不支持完整呈现。</p><button onClick={exportLegacy}>下载原始快照</button><button onClick={() => setRestart(n => n + 1)}>保留原始快照并新建白板</button></div> : <>
       {extras && <div className="board-extras">
         <div className="board-extra-actions"><button disabled={!annotation || disabled} onClick={addNote}>添加老师便签</button><button onClick={() => void exportImage()}>{selection ? '导出当前选区' : '导出整板'}</button><label className="checkbox-row" title={live ? '停笔三秒后按需观察，最短间隔二十秒' : '连接真实视觉模型后可用'}><input type="checkbox" checked={auto && live} disabled={!live} onChange={e => setAuto(e.target.checked)}/>自动观察</label></div>
         <details className="board-development"><summary>开发演示与动作记录</summary><div className="board-queue">
@@ -202,15 +202,12 @@ export default function Whiteboard(props: Props) {
         {!!queue?.steps.length && <details><summary>动作记录</summary><ol>{queue.steps.map(s => <li key={s.action.id}>{s.action.type} · {s.status} {s.executedRevision !== undefined ? `· 修订 ${s.executedRevision}` : ''}{s.error ? ` · ${s.error}` : ''}</li>)}</ol></details>}
       </div></details></div>}
       <div ref={scroll} className={`canvas board-scroll board-tool-${tool}`}><svg ref={svg} className="teaching-board" data-testid="teaching-board" aria-label="课堂白板，黑色为学生书写，蓝色为老师板书" role="img" tabIndex={0} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} style={{ width: `${zoom * 100}%` }} onPointerDown={start} onPointerMove={move} onPointerUp={e => finish(e)} onPointerCancel={e => finish(e, true)} onLostPointerCapture={e => finish(e, true)}>
-        <defs><pattern id={`board-dots-${lesson.id}`} width="32" height="32" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#e9edf2"/></pattern></defs>
         <rect width={WIDTH} height={HEIGHT} fill="white" />
-        <rect width={WIDTH} height={HEIGHT} fill={`url(#board-dots-${lesson.id})`} pointerEvents="none"/>
-        {!snapshot?.elements.length && !draft.length && <g pointerEvents="none" fill="#8e9aab" fontFamily="sans-serif"><text x="80" y="110" fontSize="30">在这里写下你的第一步</text><text x="80" y="155" fontSize="22">直接用笔、触摸或鼠标书写。写好后，点「请看这一步」。</text></g>}
         {snapshot?.elements.map(e => <BoardGlyph key={e.id} element={e} />)}
         {!!draft.length && <path d={path(draft)} fill="none" stroke="#242424" strokeWidth={3} strokeLinecap="round" pointerEvents="none" />}
         {selection && <rect {...selection} fill="#3268cf10" stroke="#3268cf" strokeWidth={2} strokeDasharray="8 6" pointerEvents="none" />}
       </svg></div>
     </>}
-    <div className="board-status"><span role="status">{status}</span>{!legacy && <button onClick={() => void controller.current?.flush().catch(e => props.onError(e.message))}>重试保存</button>}</div>
+    <div className="board-status"><span role="status">{status}</span>{!legacy && status.includes('保存失败') && <button onClick={() => void controller.current?.flush().catch(e => props.onError(e.message))}>重试保存</button>}</div>
   </section>;
 }

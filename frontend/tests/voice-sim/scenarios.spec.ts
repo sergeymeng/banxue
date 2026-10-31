@@ -8,7 +8,7 @@ test('real local WS + Qwen adapters: streamed ASR, text, TTS and playback receip
   await playing(page);
   await expect.poll(() => count(page, 'send_played'), { timeout: 15000 }).toBeGreaterThan(0);
   const usage = await (await request.get(`${backend}/api/lessons/${ids.lesson}/usage`)).json();
-  expect(new Set(usage.requests.map((r: { role: string }) => r.role))).toEqual(new Set(['asr', 'fast', 'tts']));
+  expect(new Set(usage.requests.map((r: { role: string }) => r.role))).toEqual(new Set(['asr', 'reasoning', 'tts']));
   await page.screenshot({ path: '../docs/voice-evaluation/simulation-classroom.png' });
   await finish(page, request, info, ids);
 });
@@ -85,8 +85,11 @@ for (const stop of ['disconnect', 'device', 'leave']) test(`${stop} releases cap
   await expect.poll(async () => (await (await request.get(backend + '/__simulation/state')).json()).active.llm).toBe(1);
   if (stop === 'disconnect') await request.post(backend + '/__simulation/disconnect');
   if (stop === 'device') await page.evaluate(() => (window as SimWindow).voiceSim.unplug());
-  if (stop === 'leave') await page.getByRole('button', { name: '教材', exact: true }).click();
-  if (stop === 'leave') await page.getByRole('button', { name: '课堂', exact: true }).click();
+  if (stop === 'leave') await page.getByRole('button', { name: '课堂菜单', exact: true }).click();
+  if (stop === 'leave') {
+    await page.getByRole('button', { name: '设置', exact: false }).click();
+    await page.getByRole('button', { name: '关闭', exact: true }).click();
+  }
   await stopped(page);
   const usage = await finish(page, request, info, ids);
   expect(usage.requests.some((r: { status: string; usage_source: string; estimated_cost_gbp: number }) =>

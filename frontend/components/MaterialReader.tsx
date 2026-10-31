@@ -21,6 +21,5 @@ export default function MaterialReader({ teacherId, material, close }: { teacher
   return <div className="material-reader">
     <div className="reader-heading"><button onClick={close}>返回教材列表</button><strong>{material.name}</strong>{url && <a href={url} download={material.name}>下载 PDF</a>}</div>
     {error ? <p role="alert">{error}</p> : !url ? <p>正在读取本机教材…</p> : <iframe title={`教材预览：${material.name}`} src={url} />}
-    <p className="reader-note">当前课堂和白板保持打开。浏览器不支持内嵌 PDF 时，可下载查看。</p>
   </div>;
 }

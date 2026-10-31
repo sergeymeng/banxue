@@ -32,14 +32,14 @@ const os = require('node:os');
     await page.routeWebSocket('**/api/lessons/*/voice', ws => { socket = ws; ws.onMessage(data => {
       if (typeof data === 'string' && JSON.parse(data).ticket) ws.send(JSON.stringify({ type: 'ready' }));
     }); });
-    await page.getByRole('button', { name: '开始语音课堂' }).click();
+    await page.getByRole('button', { name: '开始语音' }).click();
     await expect(page.getByRole('status').filter({ hasText: '正在听' })).toBeVisible({ timeout: 30000 });
     for (const event of [{ type: 'turn', turn_id: 'smoke' }, { type: 'segment', turn_id: 'smoke', segment_id: '1', text: '桌面播放测试' },
       { type: 'audio', turn_id: 'smoke', segment_id: '1', pcm: Buffer.alloc(24000 * 2 * 5).toString('base64') }]) socket.send(JSON.stringify(event));
     await expect(page.getByRole('status').filter({ hasText: '正在讲解' })).toBeVisible();
     await page.getByRole('button', { name: '立即停止老师' }).click();
-    await page.getByRole('button', { name: '结束语音', exact: true }).click();
-    await expect(page.getByRole('button', { name: '开始语音课堂' })).toBeVisible();
+    await page.getByRole('button', { name: '关闭语音', exact: true }).click();
+    await expect(page.getByRole('button', { name: '开始语音' })).toBeVisible();
     await page.getByRole('button', { name: '课堂菜单', exact: true }).click();
     await page.getByRole('button', { name: /设置/ }).click();
     await expect(page.getByLabel('千问 API Key')).toHaveValue('');
