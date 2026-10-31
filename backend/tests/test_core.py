@@ -237,7 +237,8 @@ def test_observation_confidence_no_assessment_and_dedupe(tmp_path):
         teacher, lesson = begin(client)
         path = f"/api/lessons/{lesson['id']}/observe"
         result = client.post(path, json={"image": image, "trigger": "explicit"}).json()
-        assert result["decision"]["action"] == "WAIT"
+        assert result["decision"]["action"] == "ASK"
+        assert result["decision"]["reason"] == "uncertain_observation"
         assert client.get(f"/api/teachers/{teacher['id']}/memory").json() == []
         assert client.post(path, json={"image": image, "trigger": "explicit"}).json()["skipped"] == "白板没有变化"
         assert len(client.get(f"/api/lessons/{lesson['id']}/usage").json()["requests"]) == 1
