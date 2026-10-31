@@ -21,8 +21,13 @@ class Gateway:
         self.settings = settings
         self.transport = transport
 
-    async def complete(self, db, lesson_id, role, messages, *, image=None, on_delta=None, image_detail="low"):
+    async def complete(self, db, lesson_id, role, messages, *, image=None, on_delta=None, image_detail="low", vision_protocol="chat_completions"):
         cfg, settings = self.settings.role(role), self.settings
+        if vision_protocol not in {"chat_completions", "qwen_vl"} or (
+            vision_protocol == "qwen_vl" and (role != "vision" or not image or on_delta)
+        ):
+            raise ModelError("视觉协议配置无效。", "configuration")
+        qwen_vl = vision_protocol == "qwen_vl"
         if settings.model_mode == "demo":
             raise ModelError("演示模式不会调用模型。")
         if cfg["input_gbp"] is None or cfg["output_gbp"] is None:
@@ -76,15 +81,18 @@ class Gateway:
                     "role": "user",
                     "content": [
                         {"type": "text", "text": "只观察这张白板当前可见内容。"},
-                        {"type": "image_url", "image_url": {"url": image, "detail": image_detail}},
+                        {"type": "image_url", "image_url": ({"url": image} if qwen_vl else {"url": image, "detail": image_detail})},
                     ],
                 }
             )
         payload = {
             "model": cfg["model"],
             "messages": payload_messages,
-            settings.completion_token_field: output_limit,
+            ("max_tokens" if qwen_vl else settings.completion_token_field): output_limit,
         }
+        if qwen_vl:
+            # Explicit adapter choice only; multimodal JSON Schema is not a server-side guarantee.
+            payload.update(response_format={"type": "json_object"}, enable_thinking=False)
         headers = {"Authorization": "Bearer " + cfg["api_key"]} if cfg["api_key"] else {}
         if on_delta:
             payload.update(stream=True, stream_options={"include_usage": True})
@@ -123,6 +131,8 @@ class Gateway:
                     )
                     response.raise_for_status()
                     body = response.json()
+                    if role == "vision" and body["choices"][0].get("finish_reason") not in (None, "stop"):
+                        raise ValueError("incomplete vision output")
                     answer = body["choices"][0]["message"]["content"]
                     actual = body.get("usage")
             if not isinstance(answer, str) or not answer.strip():

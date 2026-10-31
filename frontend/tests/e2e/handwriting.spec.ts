@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 test('region review, edit, reload and confirmation (mock only)', async ({ page, request }) => {
-  const base = 'http://127.0.0.1:8100';
+  const base = process.env.HANDWRITING_E2E_API_URL || 'http://127.0.0.1:8100';
   const teacher = await (await request.post(`${base}/api/teachers`, { data: { name: 'Handwriting E2E' } })).json();
   const lesson = await (await request.post(`${base}/api/teachers/${teacher.id}/lessons`, { data: {} })).json();
   const binary = readFileSync('public/handwriting/fraction.png');
@@ -47,23 +47,29 @@ test('region review, edit, reload and confirmation (mock only)', async ({ page, 
   });
   await page.goto('/');
   await page.getByRole('button', { name: '区域识别与核对', exact: true }).click();
+  await page.getByText('其他图片与测试', { exact: true }).click();
   await page.getByRole('button', { name: '载入测试图片' }).click();
   await expect(page.getByAltText('选中的解题区域原图')).toBeVisible();
   await page.getByRole('button', { name: '识别此区域' }).click();
-  await expect(page.getByLabel('歧义 a1 的确认')).toBeVisible();
-  await expect(page.getByRole('button', { name: '已核对原图，确认以上内容' })).toBeDisabled();
+  await expect(page.getByText('这里需要看看：分母是 2 还是 2x？')).toBeVisible();
+  await expect(page.getByLabel('数学表达式（LaTeX，每行一项）').first()).not.toBeVisible();
+  await expect(page.getByRole('button', { name: '确认这一步，请老师看看' })).toBeDisabled();
   await page.reload();
   await expect(page.getByRole('dialog', { name: '解题区域 · 原图核对' })).toBeVisible();
   await expect(page.getByAltText('选中的解题区域原图')).toHaveAttribute('src', image);
+  await page.getByText('修改公式、涂改或顺序', { exact: true }).first().click();
   await page.getByRole('button', { name: '下移', exact: true }).first().click();
-  await expect(page.getByLabel('逐字文本').first()).toHaveValue('误识别行');
+  await expect(page.getByRole('textbox', { name: '步骤内容', exact: true }).first()).toHaveValue('误识别行');
+  await page.getByText('修改公式、涂改或顺序', { exact: true }).first().click();
   await page.getByRole('button', { name: '删除误识别行' }).first().click();
-  await page.getByLabel('逐字文本').fill('y=(x+1)/(2x)');
+  await page.getByRole('textbox', { name: '步骤内容', exact: true }).fill('y=(x+1)/(2x)');
   await page.getByLabel('数学表达式（LaTeX，每行一项）').fill('y=\\frac{x+1}{2x}');
+  await page.getByText('补充说明', { exact: true }).click();
   await page.getByLabel('歧义 a1 的确认').fill('原图为 2x，已修正');
-  await page.getByLabel('这一步写完了，请老师看看').check();
-  await page.screenshot({ path: '../docs/handwriting-evaluation/review.png', fullPage: true });
-  await page.getByRole('button', { name: '已核对原图，确认以上内容' }).click();
+  await page.getByText('修改公式、涂改或顺序', { exact: true }).click();
+  await page.getByText('补充说明', { exact: true }).click();
+  await page.screenshot({ path: '../docs/handwriting-evaluation/review-simple.png', fullPage: true });
+  await page.getByRole('button', { name: '确认这一步，请老师看看' }).click();
   await expect(page.getByText('核对已保存并交给教学模块；未更新掌握程度。')).toBeVisible();
   expect(confirmed).toBe(true);
   await request.delete(`${base}/api/teachers/${teacher.id}`);
@@ -71,11 +77,12 @@ test('region review, edit, reload and confirmation (mock only)', async ({ page, 
 
 test('demo shows synthetic region without pretending to recognize it', async ({ page, request }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  const base = 'http://127.0.0.1:8100';
+  const base = process.env.HANDWRITING_E2E_API_URL || 'http://127.0.0.1:8100';
   const teacher = await (await request.post(`${base}/api/teachers`, { data: { name: 'Handwriting Demo E2E' } })).json();
   await page.addInitScript(id => localStorage.setItem('banxue.lastTeacher', id), teacher.id);
   await page.goto('/');
   await page.getByRole('button', { name: '区域识别与核对', exact: true }).click();
+  await page.getByText('其他图片与测试', { exact: true }).click();
   await page.getByRole('button', { name: '载入测试图片' }).click();
   await expect(page.getByText('演示模式不运行手写识别。', { exact: false })).toBeVisible();
   await expect(page.getByRole('button', { name: '识别此区域' })).toBeDisabled();

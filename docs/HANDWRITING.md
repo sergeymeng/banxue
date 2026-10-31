@@ -1,5 +1,7 @@
 # 区域图片识别与解题观察（阶段一）
 
+**第二轮接线以 [HANDWRITING_INTEGRATION.md](HANDWRITING_INTEGRATION.md) 为准**：补充 revision/element IDs、确认前 flush 与过期校验；[Qwen 显式适配](QWEN_VISION.md)。下文保留第一轮流程背景，旧 source 示例已被第二轮契约取代。
+
 分支 `codex/handwriting`，独立工作区 `../banxue-handwriting`。本阶段实现视觉服务、结构化观察、原图核对与错误记录工具。实际视觉模型能力尚未验证，不能以接口模拟或合成图片测试宣称已可靠识别真实学生手写。
 
 ## 数据流与边界
