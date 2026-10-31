@@ -1,8 +1,9 @@
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Protocol
 
 from .curriculum import BANK
+from .teaching_steps import current_step, flow, next_prompt, question
 
 STATES = [
     "ONBOARDING",
@@ -24,6 +25,7 @@ class Decision:
     reason: str
     role: str = "fast"
     auto: bool = False
+    board_actions: list[dict] = field(default_factory=list)
 
     def json(self):
         return asdict(self)
@@ -58,7 +60,15 @@ class TeachingPolicy:
     def decide(self, s, text="", event="message", result=None):
         state = s["state"]
         item = BANK[s.get("topic_index", 0)]
+        if state == "SESSION_SUMMARY":
+            return Decision("WAIT", "这节课已结束。可以创建下一节课继续。", "ended")
+        if event in {"pause", "end", "correction", "question", "topic", "voice"}:
+            for action in s.get("board_actions", []):
+                if action["status"] == "proposed":
+                    action["status"] = "cancelled"
         if event == "end":
+            s["continuation"] = {"state": state, "topic_index": s.get("topic_index", 0),
+                                 "exercise_flow": s.get("exercise_flow"), "assisted": s.get("assisted", False)}
             s["state"] = "SESSION_SUMMARY"
             s["paused"] = False
             return Decision("REVIEW", "今天先到这里。学习记录已保存；下次从需要巩固的步骤继续。", "student_end")
@@ -66,17 +76,40 @@ class TeachingPolicy:
             s["paused"] = True
             return Decision("WAIT", "好，先休息。你的白板和进度已经保存。准备好了再恢复。", "student_pause")
         if event == "resume":
+            was_paused = s.get("paused", False)
             s["paused"] = False
-            return Decision(
-                "ASK",
-                "回来了。我们接着刚才这道题，你也可以先让我重新解释。",
-                "student_resume",
-                auto=state in ["PLANNING", "EXPLAINING"],
-            )
+            if was_paused or state not in {"PLANNING", "EXPLAINING"}:
+                return Decision("ASK", "接着刚才的位置。" + (next_prompt(s) if state in
+                                {"DIAGNOSTIC", "GUIDED_PRACTICE", "INDEPENDENT_PRACTICE"} else "准备好了可以说“继续”。"),
+                                "student_resume")
+            # Explicit student continuation may advance; playback completion alone never does.
         if s.get("paused"):
             return Decision("WAIT", "课堂已暂停。点击恢复后再继续。", "paused")
-        if state == "SESSION_SUMMARY":
-            return Decision("WAIT", "这节课已结束。可以创建下一节课继续。", "ended")
+        if event == "return":
+            s.pop("detour", None)
+            s.pop("pending_correction", None)
+            return Decision("ASK", next_prompt(s), "return_to_exercise")
+        if event == "next":
+            s.pop("pending_correction", None)
+            s.pop("detour", None)
+            s["topic_index"] = (s.get("topic_index", 0) + 1) % len(BANK)
+            s["state"] = "GUIDED_PRACTICE"
+            s["assisted"] = True
+            flow(s)["scaffold"] = True
+            return Decision("ASK", question(s) + " " + current_step(s)[0], "student_next")
+        if event == "correction_detail":
+            s.pop("pending_correction", None)
+            s["assisted"] = True
+            return Decision("ASK", "收到你的纠正。先核对原题：" + question(s),
+                            "correction_received", "reasoning")
+        if event == "correction":
+            s["pending_correction"] = text[:500]
+            return Decision("ASK", "你指出的是哪一句或哪个符号？请把正确写法发来，我先核对，再接原题。",
+                            "student_correction", "reasoning")
+        if event in {"question", "topic"}:
+            s["detour"] = text[:500]
+            s["assisted"] = True
+            return Decision("EXPLAIN", "先回应这个问题，原题进度保留。", "student_detour", "reasoning")
         if event == "voice":
             return Decision(
                 "EXPLAIN", "先回答学生刚说的问题，随后从实际听过的句段自然衔接当前题。"
@@ -84,47 +117,58 @@ class TeachingPolicy:
                 "的歧义，先简短确认原意，保留英文术语，不静默改写数学观点。口头答案不作为评分证据。",
                 "voice_question", "reasoning",
             )
-        if event == "reexplain":
+        if event in {"reexplain", "hint"}:
             s["assisted"] = True
-            return Decision("EXPLAIN", item["explanation"] + " " + item["hint"], "student_reexplain", "reasoning")
-        if event == "topic":
-            s["assisted"] = True
-            s["detour"] = text
-            return Decision(
-                "EXPLAIN",
-                "回应学生的新问题，不评分；保留原题，允许随时回到原课程。问题：" + text,
-                "student_detour",
-                "reasoning",
-            )
-        if event == "hint":
-            s["assisted"] = True
-            return Decision("HINT", item["hint"], "student_hint")
+            f = flow(s)
+            f["scaffold"] = True
+            f["hints"] = min(2, f["hints"] + 1)
+            prompt, _, explanation = current_step(s)
+            prefix = explanation + " " if event == "reexplain" or f["hints"] > 1 else ""
+            return Decision("EXPLAIN" if event == "reexplain" else "HINT", prefix + prompt,
+                            "student_" + event)
         if event == "board":
             obs = s.get("observation", {})
-            if obs.get("confidence", 0) < 0.8 or not obs.get("step_complete"):
-                return Decision("WAIT", "白板尚不足以可靠判断完整步骤，保持安静。", "uncertain_observation")
+            if not obs.get("step_complete"):
+                return Decision("WAIT", "先留时间写完这一步。", "unfinished_observation")
+            if obs.get("confidence", 0) < 0.8:
+                return Decision("ASK", "这一步的符号没看清。请把表达式打出来确认一下。", "uncertain_observation")
             s["assisted"] = True
             return Decision(
                 "ASK",
-                "根据可见步骤提一个简短检查问题，不直接宣判错误。观察：" + str(obs.get("visible_text", ""))[:800],
+                "根据上下文中的可见步骤提一个简短确认问题，不直接宣判错误。",
                 "completed_step",
                 "reasoning",
             )
+        if not text.strip() and event == "message" and state in {
+            "DIAGNOSTIC", "GUIDED_PRACTICE", "INDEPENDENT_PRACTICE"
+        }:
+            return Decision("WAIT", "", "waiting_for_student")
+        check = s.get("answer_check")
+        if check and check["scope"] == "step":
+            f = flow(s)
+            f["scaffold"] = True
+            s["assisted"] = True
+            if check["correct"]:
+                f["step"] += 1
+                f["hints"] = 0
+                return Decision("ASK", "这一步成立。" + current_step(s)[0], "step_passed")
+            return Decision("HINT", "这一步还需要检查。" + current_step(s)[2]
+                            + " " + current_step(s)[0], "step_retry")
         if state == "ONBOARDING":
             p = s["profile"] = extract_profile(s.get("profile", {}), text)
-            for key, question in [
+            for key, profile_question in [
                 ("exam_board", "你考的是 Edexcel、AQA，还是其他考试局？"),
                 ("target_grade", "你这次希望达到什么成绩？"),
                 ("exam_time_reported", "距离考试大约还有多久？"),
             ]:
                 if not p.get(key):
-                    return Decision("ASK", question, "missing_" + key)
+                    return Decision("ASK", profile_question, "missing_" + key)
             s["state"] = "DIAGNOSTIC"
             s["topic_index"] = 0
             s["assisted"] = False
             return Decision(
                 "ASK",
-                "我先看几个具体步骤，再判断怎么安排；不能保证目标成绩。这次先诊断三个求导知识点。"
+                "先看一道求导题。"
                 + BANK[0]["question"],
                 "start_diagnostic",
             )
@@ -132,7 +176,7 @@ class TeachingPolicy:
             if result is None:
                 return Decision(
                     "ASK",
-                    "先给出这题的导数表达式，例如 dy/dx=…；不会也可以说“不会”。" + item["question"],
+                    "写出你的下一步；需要时可以说“提示”。",
                     "need_answer",
                 )
             s.setdefault("diagnostic", []).append({"topic": item["topic"], "correct": result})
@@ -162,18 +206,20 @@ class TeachingPolicy:
         if state == "EXPLAINING":
             s["state"] = "GUIDED_PRACTICE"
             s["assisted"] = True
-            return Decision("EXPLAIN", item["explanation"] + "\n现在你来试：" + item["practice"], "begin_guided")
+            flow(s)["scaffold"] = True
+            return Decision("ASK", item["practice"] + " " + current_step(s)[0], "begin_guided")
         if state in ["GUIDED_PRACTICE", "INDEPENDENT_PRACTICE"]:
             if result is None:
                 return Decision(
                     "ASK",
-                    "可以在白板上推导，再把最终导数写到消息里，我会进行精确多项式校验。"
-                    + (item["practice"] if state == "GUIDED_PRACTICE" else item["independent"]),
+                    "这句还不能确定是哪一步。请写出表达式，或告诉我卡在哪。",
                     "need_verifiable_answer",
                 )
             if not result:
                 s["assisted"] = True
-                return Decision("HINT", item["hint"] + " 再检查一次，把修正后的导数发给我。", "incorrect_answer")
+                flow(s)["scaffold"] = True
+                return Decision("HINT", "这个表达式与这题的导数还不一致。" + current_step(s)[0],
+                                "incorrect_answer")
             if state == "GUIDED_PRACTICE":
                 s["state"] = "INDEPENDENT_PRACTICE"
                 s["assisted"] = False

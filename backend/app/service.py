@@ -4,11 +4,14 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 
 from .context import build_context
-from .curriculum import BANK, grade
+from .curriculum import BANK
 from .db import Event, Knowledge, Lesson
 from .documents import retrieve
 from .llm import ModelError
 from .policy import BaselinePolicy, TeachingPolicy
+from .teaching_contracts import apply_events, propose_question
+from .teaching_language import demo_reply
+from .teaching_steps import conversational_event, interpret_answer, next_prompt, question
 
 
 def add_message(s, role, content):
@@ -25,12 +28,14 @@ def answer_key(s):
     }.get(s["state"])
 
 
-def record_evidence(db, lesson, s, text, result):
+def record_evidence(db, lesson, s, text, result, check=None):
     item = BANK[s["topic_index"]]
     event = Event(
         lesson_id=lesson.id,
         data={
-            "type": "assessment",
+            "type": "step_assessment" if check and check["scope"] == "step" else "assessment",
+            "exercise_key": f"{s.get('topic_index', 0)}:{s['state']}",
+            "step": check.get("step") if check else None,
             "topic": item["topic"],
             "correct": result,
             "answer": text,
@@ -38,10 +43,13 @@ def record_evidence(db, lesson, s, text, result):
             "assisted": s.get("assisted", False),
             "method": "exact_polynomial_equivalence",
             "confidence": 1.0,
+            "uncertainty": "只验证此表达式的多项式等价性，不推断理解或长期掌握。",
         },
     )
     db.add(event)
     db.flush()
+    if check and check["scope"] == "step":
+        return event.id
     kid = lesson.teacher_id + ":" + item["topic"]
     row = db.get(Knowledge, kid)
     data = (
@@ -53,54 +61,67 @@ def record_evidence(db, lesson, s, text, result):
     data["correct"] += int(result)
     data["observed_accuracy"] = data["correct"] / data["attempts"]
     data["confidence"] = min(0.9, data["attempts"] / (data["attempts"] + 5))
+    data["uncertainty"] = "有限题目证据；受提示、猜测和短期记忆影响，不能认定长期掌握。"
     data["confidence_note"] = "启发式证据充分度，非校准的掌握概率"
     data["evidence"] = (data["evidence"] + [event.id])[-30:]
     data["history"] = (
-        data["history"] + [{"at": event.created_at, "correct": result, "assisted": s.get("assisted", False)}]
+        data["history"] + [{"at": event.created_at, "evidence_id": event.id, "correct": result,
+                            "assisted": s.get("assisted", False)}]
     )[-30:]
-    data["next_review"] = (datetime.now(timezone.utc) + timedelta(days=7 if result else 1)).isoformat()
+    data["next_review"] = (datetime.now(timezone.utc) + timedelta(days=7 if result and not s.get("assisted") else 1)).isoformat()
     if row:
         row.data = data
     else:
         db.add(Knowledge(id=kid, teacher_id=lesson.teacher_id, data=data))
 
+    return event.id
+
+
+def receive_teaching_events(db, lesson, events):
+    """Adapter boundary: ingestion never calls a model or advances teaching."""
+    s = copy.deepcopy(lesson.data)
+    apply_events(s, events)
+    lesson.data = s
+    db.commit()
+    return public_lesson(lesson)
+
 
 async def turn(db, lesson, teacher, gateway, text="", event="message", *, voice_context=None):
     s = copy.deepcopy(lesson.data)
-    if event == "auto" and (s["state"] not in ["PLANNING", "EXPLAINING"] or s.get("paused")):
+    if event == "auto" and (s["state"] not in ["PLANNING", "EXPLAINING"] or s.get("paused") or voice_context is not None):
         return {"lesson": public_lesson(lesson), "decision": None, "sources": []}
     if voice_context is not None:
         s["voice_context"] = voice_context
+    s.pop("answer_check", None)
     if event == "message":
-        command = text.strip().lower()
-        if command in ["休息", "暂停", "pause", "先休息"]:
-            event = "pause"
-        elif command in ["结束", "结束课程", "end", "下课"]:
-            event = "end"
-        elif command in ["重讲", "再解释一次", "重新解释"]:
-            event = "reexplain"
-        elif command in ["提示", "给我提示", "hint"]:
-            event = "hint"
+        event = conversational_event(text)
+        if event == "message" and s.get("pending_correction"):
+            event = "correction_detail"
     if text:
         add_message(s, "user", text)
     result = None
+    check = None
     expected = answer_key(s)
-    if (voice_context is None or voice_context.get("input_source") == "typed") and event == "message" and expected and not s.get("paused") and s.get("mode") != "baseline":
-        result = False if text.strip() in ["不会", "不知道", "不知道怎么做", "I don't know"] else grade(text, expected)
+    typed = voice_context is None or voice_context.get("input_source") == "typed"
+    if typed and event == "message" and expected and not s.get("paused") and s.get("mode") != "baseline":
+        check = interpret_answer(s, text, expected)
+        s["answer_check"] = check
+        if check and check["scope"] == "final":
+            result = check["correct"]
+    evidence_state = copy.deepcopy(s)
     policy = BaselinePolicy() if s.get("mode") == "baseline" else TeachingPolicy()
-    if voice_context is not None and voice_context.get("input_source") != "typed" and event == "message" and s["state"] != "ONBOARDING":
+    if not typed and event == "message" and s["state"] != "ONBOARDING":
         event = "voice"
     decision = policy.decide(s, text, event, result)
+    if s.get("mode") != "baseline":
+        propose_question(s, decision, question(s))
     # Profile persists across sessions, isolated by teacher.
     knowledge = [r.data for r in db.scalars(select(Knowledge).where(Knowledge.teacher_id == teacher.id))]
     query = text + " " + BANK[s.get("topic_index", 0)]["title"] + " derivative differentiation"
     sources = retrieve(db, teacher.id, query)
     if gateway.settings.model_mode == "demo":
-        if event == "topic" or s.get("mode") == "baseline":
-            reply = "当前为离线演示，只支持内置求导课程。配置真实模型后才能讨论任意问题或运行 LLM 基线。"
-        else:
-            reply = decision.instruction
-    elif event in ["pause", "resume", "end"] or decision.action == "WAIT":
+        reply = demo_reply(s, decision, text)
+    elif event in ["pause", "resume", "end"] or decision.action == "WAIT" or decision.reason == "uncertain_observation":
         reply = decision.instruction
     else:
         try:
@@ -113,21 +134,29 @@ async def turn(db, lesson, teacher, gateway, text="", event="message", *, voice_
         if role == "fast":
             role = teacher.data.get("default_role", "fast")
         reply = await gateway.complete(db, lesson.id, role, messages)
-    if result is not None:
-        record_evidence(db, lesson, copy.deepcopy(lesson.data), text, result)
+    if check is not None:
+        evidence_id = record_evidence(db, lesson, evidence_state, text, check["correct"], check)
+        s["last_check"] = {**check, "evidence_id": evidence_id,
+                           "exercise_key": f"{evidence_state.get('topic_index', 0)}:{evidence_state['state']}",
+                           "uncertainty": "表达式校验不代表理解或长期掌握。"}
+        if evidence_state["state"] == "DIAGNOSTIC" and check["scope"] == "final":
+            s["diagnostic"][-1].update(evidence_id=evidence_id, uncertainty=s["last_check"]["uncertainty"])
+        s.pop("answer_check", None)
         db.flush()
         knowledge = [r.data for r in db.scalars(select(Knowledge).where(Knowledge.teacher_id == teacher.id))]
     if decision.action == "WAIT" and event == "board":
         reply = ""
     if reply:
         add_message(s, "assistant", reply)
-    if s["state"] == "SESSION_SUMMARY":
+    if s["state"] == "SESSION_SUMMARY" and not s.get("summary"):
         s["summary"] = {
             "topic": BANK[s.get("topic_index", 0)]["title"],
             "profile": s.get("profile", {}),
             "diagnostic": s.get("diagnostic", []),
             "knowledge": knowledge,
-            "next_step": "复习最近错误，再做一次独立迁移题。",
+            "next_step": "接着未完成的步骤练习，再用独立题检查。",
+            "continuation": s.get("continuation"),
+            "last_check": s.get("last_check"),
             "ended_at": datetime.now(timezone.utc).isoformat(),
         }
     if voice_context is not None:
@@ -185,7 +214,18 @@ def new_lesson(db, teacher_id, mode):
         "board": None,
         "last_summary": previous.data.get("summary", {}) if previous else {},
     }
-    if previous and mode != "baseline" and profile.get("exam_board"):
+    continuation = previous.data.get("summary", {}).get("continuation") if previous else None
+    if (continuation and mode != "baseline" and previous.data.get("mode") == mode
+            and continuation["state"] in {"DIAGNOSTIC", "GUIDED_PRACTICE", "INDEPENDENT_PRACTICE"}):
+        state.update(copy.deepcopy(continuation))
+        state["diagnostic"] = copy.deepcopy(previous.data.get("diagnostic", []))
+        state["last_decision"] = {"auto": False}
+        state["board"] = copy.deepcopy(previous.data.get("board"))
+        prompt = "接着上次未完成的题：" + question(state)
+        if (state.get("exercise_flow") or {}).get("scaffold"):
+            prompt += " " + next_prompt(state)
+        add_message(state, "assistant", prompt)
+    elif previous and mode != "baseline" and profile.get("exam_board"):
         knowledge = list(db.scalars(select(Knowledge).where(Knowledge.teacher_id == teacher_id)))
         due = [k for k in knowledge if k.data.get("next_review", "") <= datetime.now(timezone.utc).isoformat()]
         weakest = min(due or knowledge, key=lambda k: k.data["observed_accuracy"], default=None)
