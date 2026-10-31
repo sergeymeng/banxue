@@ -49,7 +49,7 @@ test('classroom shell keeps the board mounted across resources, teacher switch a
     const before = (await board.boundingBox())!.width;
     await page.getByRole('button', { name: '收起讲解', exact: true }).click();
     expect((await board.boundingBox())!.width).toBeGreaterThan(before);
-    await expect(page.getByRole('button', { name: '开始语音课堂' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '开始语音' })).toBeVisible();
     await page.getByRole('button', { name: '展开讲解', exact: true }).click();
     await page.getByRole('button', { name: '教材', exact: true }).click();
     await page.locator('input[type=file]').setInputFiles('../samples/derivatives.pdf');
@@ -85,7 +85,7 @@ test('narrow classroom opens on ink, maps zoomed coordinates and pans without wr
   const teacher = await openClassroom(page, request, '林老师 · 触摸测试');
   try {
     await expect(page.locator('.conversation')).toBeHidden();
-    await expect(page.getByRole('button', { name: '开始语音课堂' })).toBeInViewport();
+    await expect(page.getByRole('button', { name: '开始语音' })).toBeInViewport();
     await expect(page.getByRole('button', { name: '结束本节' })).toBeInViewport();
     const board = page.getByTestId('teaching-board');
     await page.getByLabel('白板缩放').selectOption('2');

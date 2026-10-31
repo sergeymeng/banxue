@@ -70,7 +70,7 @@ test('shared board: ink, teacher sequence, pause/cancel, undo, region PNG and re
     });
     await page.getByRole('button', { name: '请看这一步' }).click();
     await expect(page.getByRole('status')).toContainText('测试桩'); expect(observed).toBe(true);
-    await page.getByRole('button', { name: '重试保存' }).click(); await page.reload();
+    await page.reload();
     await expect(page.locator('[data-author=student]')).toHaveCount(1); await expect(page.locator('[data-author=teacher]')).toHaveCount(6);
     await page.getByRole('button', { name: '白板更多功能' }).click();
     await page.getByText('开发演示与动作记录', { exact: true }).click();
@@ -106,7 +106,8 @@ test('legacy snapshots stay untouched until explicit replacement; save failures 
     let fail = true;
     await page.route('**/board', route => fail ? route.fulfill({ status: 503, json: { detail: 'test save failure' } }) : route.continue());
     await page.getByRole('button', { name: '保留原始快照并新建白板' }).click();
-    await expect(page.getByRole('status')).toContainText('保存失败'); await draw(page); fail = false;
+    await expect(page.getByRole('status')).toContainText('保存失败'); await draw(page);
+    await expect(page.getByRole('status')).toContainText('保存失败'); fail = false;
     const saved = page.waitForRequest(r => r.url().endsWith('/board') && r.postDataJSON().snapshot.elements.length === 1);
     await page.getByRole('button', { name: '重试保存' }).click();
     expect((await saved).postDataJSON().snapshot.legacySnapshot).toEqual(legacy);
