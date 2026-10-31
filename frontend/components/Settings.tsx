@@ -5,7 +5,7 @@ import type { DesktopSettings } from '@/lib/desktop';
 import Icon from './Icon';
 import VoiceSettings from './VoiceSettings';
 
-export default function Settings({ config, mode, onMode, onClose }: { config: Config | null; mode: string; onMode: (v: 'policy' | 'baseline') => void; onClose: () => void }) {
+export default function Settings({ config, mode, onMode, onClose, beforeApply }: { beforeApply?: () => Promise<void>; config: Config | null; mode: string; onMode: (v: 'policy' | 'baseline') => void; onClose: () => void }) {
   const [value, setValue] = useState<DesktopSettings | null>(null);
   const [desktop, setDesktop] = useState(false);
   const [role, setRole] = useState<'fast' | 'reasoning' | 'vision'>('fast');
@@ -18,7 +18,7 @@ export default function Settings({ config, mode, onMode, onClose }: { config: Co
   async function save() {
     if (!value || !window.desktop) return;
     setSaving(true); setError('');
-    try { await window.desktop.saveSettings(value); window.location.reload(); }
+    try { await beforeApply?.(); await window.desktop.saveSettings(value); window.location.reload(); }
     catch (e) { setError((e as Error).message); setSaving(false); }
   }
   return <><div className="dialog-title"><h2>设置</h2><button className="icon-button" onClick={onClose} aria-label="关闭"><Icon name="close" /></button></div><div className="dialog-body settings-body">

@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react';
-type Name = 'menu' | 'chat' | 'mic' | 'pen' | 'eraser' | 'selection' | 'undo' | 'redo' | 'hand' | 'board' | 'book' | 'history' | 'settings' | 'plus' | 'chevron' | 'upload' | 'export' | 'close' | 'pause' | 'play' | 'send' | 'folder' | 'cost' | 'teacher';
+type Name = 'volume' | 'captions' | 'menu' | 'chat' | 'mic' | 'pen' | 'eraser' | 'selection' | 'undo' | 'redo' | 'hand' | 'board' | 'book' | 'history' | 'settings' | 'plus' | 'chevron' | 'upload' | 'export' | 'close' | 'pause' | 'play' | 'send' | 'folder' | 'cost' | 'teacher';
 const paths: Record<Name, React.ReactNode> = {
+  volume: <><path d="M11 4 6 8H2v8h4l5 4ZM15 8a6 6 0 0 1 0 8m3-12a11 11 0 0 1 0 16"/></>,
+  captions: <><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M5 10h5m4 0h5M5 15h8m3 0h3"/></>,
   menu: <path d="M4 6h16M4 12h16M4 18h16"/>,
   chat: <path d="M21 14a3 3 0 0 1-3 3H9l-6 4V6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3Z"/>,
   mic: <><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/></>,

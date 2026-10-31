@@ -6,6 +6,7 @@
 |---|---|---|
 | Next.js | 16.4.3 | MIT |
 | React / React DOM | 19.3.1 | MIT |
+| PDF.js (`pdfjs-dist`) | 6.4.299 | Apache-2.0；PDF 渲染，字体/CMap/WASM 保留包内各自许可 |
 | 自研 SVG 白板 | v1 | 仓库 MIT；不新增依赖 |
 | TypeScript | 5.9.3 | Apache-2.0 |
 | Vitest | 5.0.5 | MIT |
@@ -40,3 +41,5 @@ Electron 45.2.0 声明 MIT，内部 Chromium 与其他组件保留各自许可�
 VAD 与 ONNX WASM/模块随静态前端打包，不从 CDN 加载。只运行轻量语音活动检测，不部署或训练本地 ASR/LLM/TTS。许可正文保存在 `docs/licenses/` 并随桌面资源分发。千问云服务本身不因客户端代码开源而成为开源模型分发；使用须遵守账号服务条款。当前白板不再包含 tldraw SDK；历史 SDK 的专有许可、水印和校验要求保持不变。
 
 浏览器声学测试夹具 `frontend/tests/fixtures/interruption-synthetic.wav` 是使用本机 macOS Tingting 生成的合成中文语音，只是测试输入，不含学生录音，也不将系统声音资源打包为产品模型。它不能作为真人准确率、回声或千问 TTS 质量证据。
+
+PDF.js 的 worker、CMap、标准字体及 WASM 从安装包复制到本地静态目录，桌面版一并打包，无需 CDN。Apache 许可证见 [pdfjs-LICENSE.txt](licenses/pdfjs-LICENSE.txt)，`public/pdf/` 也包含原文；字体与 CMap 的许可随其目录保留。

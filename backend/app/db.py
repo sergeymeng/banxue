@@ -53,6 +53,15 @@ class Document(Base):
     data: Mapped[dict] = mapped_column(JSON)
 
 
+class MaterialInk(Base):
+    __tablename__ = "material_ink"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    lesson_id: Mapped[str] = mapped_column(ForeignKey("lessons.id", ondelete="CASCADE"), index=True)
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), index=True)
+    page: Mapped[int] = mapped_column()
+    data: Mapped[dict] = mapped_column(JSON)
+
+
 class Usage(Base):
     __tablename__ = "usage"
     id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)

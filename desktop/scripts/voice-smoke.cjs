@@ -27,7 +27,7 @@ const os = require('node:os');
       localStorage.setItem('banxue.lastTeacher', teacher.id);
     });
     await page.reload();
-    await expect(page.locator('.chat-header strong')).toHaveText('Voice Desktop Test');
+    await expect(page.locator('.teacher-participant .participant-label span')).toHaveText('Voice Desktop Test');
     let socket;
     await page.routeWebSocket('**/api/lessons/*/voice', ws => { socket = ws; ws.onMessage(data => {
       if (typeof data === 'string' && JSON.parse(data).ticket) ws.send(JSON.stringify({ type: 'ready' }));
@@ -41,7 +41,7 @@ const os = require('node:os');
     await page.getByRole('button', { name: '关闭语音', exact: true }).click();
     await expect(page.getByRole('button', { name: '开始语音' })).toBeVisible();
     await page.getByRole('button', { name: '课堂菜单', exact: true }).click();
-    await page.getByRole('button', { name: /设置/ }).click();
+    await page.getByRole('button', { name: '设置', exact: true }).click();
     await expect(page.getByLabel('千问 API Key')).toHaveValue('');
     await page.screenshot({ path: path.join(root, 'docs/voice-evaluation/desktop-qwen-settings.png') });
     if (errors.length) throw new Error(errors.join('\n'));

@@ -65,3 +65,10 @@ describe('natural interruption control (synthetic probabilities, not human audio
     expect([...new Int16Array(pcm16(new Float32Array([-2, 0, 2])))]).toEqual([-32768, 0, 32767]);
   });
 });
+
+it('volume changes preserve interruption silence and survive resume', () => {
+  const {teacher, context} = player();
+  teacher.setVolume(.35); expect(context.gains.at(-1)).toBe(.35);
+  teacher.pause(); teacher.setVolume(.6); expect(context.gains.at(-1)).toBe(0);
+  teacher.resume(); expect(context.gains.at(-1)).toBe(.6);
+});

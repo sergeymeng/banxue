@@ -11,3 +11,11 @@ const { readdir } = await import('node:fs/promises');
 for (const file of await readdir('node_modules/onnxruntime-web/dist')) {
   if (/^ort-wasm.*\.(wasm|mjs)$/.test(file)) await cp(`node_modules/onnxruntime-web/dist/${file}`, `public/voice/${file}`);
 }
+
+// PDF renderer and fonts stay local in browser and packaged desktop builds.
+await mkdir('public/pdf', { recursive: true });
+await cp('node_modules/pdfjs-dist/LICENSE', 'public/pdf/LICENSE');
+await cp('node_modules/pdfjs-dist/build/pdf.worker.min.mjs', 'public/pdf/pdf.worker.min.mjs');
+for (const dir of ['cmaps', 'standard_fonts', 'wasm']) {
+  await cp(`node_modules/pdfjs-dist/${dir}`, `public/pdf/${dir}`, { recursive: true });
+}

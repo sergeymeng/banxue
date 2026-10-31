@@ -44,10 +44,12 @@ export class TeacherAudio {
   private cursor = 0;
   turn = '';
   paused = false;
+  private volume = 1;
   disposed = false;
   constructor(readonly context: AudioContext, private receipt: (v: Receipt) => void, private changed: () => void) {
     this.gain = context.createGain(); this.gain.connect(context.destination);
   }
+  setVolume(value: number) { this.volume = Math.max(0, Math.min(1, value)); this.gain.gain.setValueAtTime(this.paused ? 0 : this.volume, this.context.currentTime); }
   begin(turn: string) { this.clear(); this.turn = turn; }
   segment(turn: string, id: string, text: string) {
     if (turn !== this.turn || this.disposed) return;
@@ -99,7 +101,7 @@ export class TeacherAudio {
   resume() {
     if (this.disposed) return;
     this.paused = false;
-    this.gain.gain.setValueAtTime(1, this.context.currentTime);
+    this.gain.gain.setValueAtTime(this.volume, this.context.currentTime);
     void this.context.resume(); this.changed();
   }
   clear() {

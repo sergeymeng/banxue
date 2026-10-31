@@ -13,8 +13,9 @@ export function useVoice(lesson: Lesson | null, available: boolean, receive: (r:
   const [text, setText] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [muted, setMuted] = useState(false);
+  const [volume, setVolume] = useState(1);
   const [latency, setLatency] = useState<number>();
-  const stop = useCallback(async () => { const current = client.current; setState('off'); setText(''); setConfirmation(''); setMuted(false); await current?.close(); if (client.current === current) client.current = null; }, []);
+  const stop = useCallback(async () => { const current = client.current; setState('off'); setText(''); setTranscript(''); setFinal(false); setConfirmation(''); setMuted(false); await current?.close(); if (client.current === current) client.current = null; }, []);
   useEffect(() => { if (!available || lesson?.state === 'SESSION_SUMMARY' || lesson?.paused) void stop(); }, [available, lesson?.state, lesson?.paused, stop]);
   useEffect(() => () => { void stop(); }, [lesson?.id, stop]);
   const start = async () => {
@@ -30,9 +31,9 @@ export function useVoice(lesson: Lesson | null, available: boolean, receive: (r:
       metric: value => { if (client.current === next) setLatency(value); },
     });
     next.subscribe(event => { if (client.current === next) events.publish(event); });
-    client.current = next; await next.start();
+    client.current = next; next.setVolume(volume); await next.start();
   };
-  return { subscribe: events.subscribe, state, transcript, final, text, muted, latency, confirmation, confirm: () => client.current?.confirm(), active: state !== 'off', start, stop,
+  return { volume, setVolume: (value: number) => {setVolume(value); client.current?.setVolume(value);}, subscribe: events.subscribe, state, transcript, final, text, muted, latency, confirmation, confirm: () => client.current?.confirm(), active: state !== 'off', start, stop,
     send: (message: string, event: string) => client.current?.text(message, event),
     toggleMute: () => { client.current?.mute(!muted); setMuted(!muted); },
     stopTeacher: () => client.current?.stopTeacher(), resume: () => client.current?.resumeTeacher() };

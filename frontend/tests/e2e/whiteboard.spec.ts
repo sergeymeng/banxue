@@ -9,6 +9,7 @@ async function classroom(page: Page, request: APIRequestContext) {
   const name = `Board ${Date.now()}`;
   await page.getByLabel('老师姓名').fill(name);
   await page.getByRole('button', { name: '创建并上课' }).click();
+  await expect(page.locator('.teacher-participant .participant-label span')).toHaveText(name);
   await expect(page.getByTestId('teaching-board')).toBeVisible();
   const teachers = await (await request.get(`${api}/api/teachers`)).json();
   return teachers.find((t: { name: string }) => t.name === name);
@@ -122,7 +123,7 @@ test('touch input, cancelled pen gesture, eraser, and mobile board stay usable',
   const teacher = await classroom(page, request);
   try {
     const board = page.getByTestId('teaching-board');
-    await board.scrollIntoViewIfNeeded();
+    await expect(board).toBeVisible();
     const box = (await board.boundingBox())!;
     // Chromium touch emulation, not physical stylus/pressure validation.
     const cdp = await page.context().newCDPSession(page);

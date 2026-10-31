@@ -1,13 +1,16 @@
 'use client';
 import type { useVoice } from '@/lib/use-voice';
 import Icon from './Icon';
+import { useState } from 'react';
 const names = { off: '语音未开启', connecting: '正在连接', listening: '正在听', thinking: '正在思考', speaking: '正在讲解', paused: '已暂停' };
 export default function VoiceControls({ voice, disabled, canAdvance, edit }: { voice: ReturnType<typeof useVoice>; disabled: boolean; canAdvance: boolean; edit: (text: string) => void }) {
+  const [volumeOpen, setVolumeOpen] = useState(false);
   return <div className="voice-controls">
     <div className="voice-buttons">
-      {voice.active ? <><span className={`voice-state voice-state-${voice.state}`} role="status">{names[voice.state]}</span><button type="button" onClick={() => void voice.stop()}>关闭语音</button></> : <button className="start-voice" title="语音和相关课堂内容会发送至所选云服务；不保存原始录音。" type="button" disabled={disabled} onClick={() => void voice.start()}><Icon name="mic"/>开始语音</button>}
+      {voice.active ? <><span className={`voice-state voice-state-${voice.state}`} role="status">{names[voice.state]}</span><button type="button" onClick={() => void voice.stop()}><Icon name="close"/>关闭语音</button></> : <button className="start-voice" title="语音和相关课堂内容会发送至所选云服务；不保存原始录音。" type="button" disabled={disabled} onClick={() => void voice.start()}><Icon name="mic"/>开始语音</button>}
       {voice.active && <><button type="button" aria-pressed={voice.muted} disabled={!voice.active} title={voice.active ? '切换麦克风输入' : '开启语音后可用'} onClick={voice.toggleMute}><Icon name="mic"/>{voice.muted ? '取消静音' : '静音'}</button>
       <button type="button" disabled={!voice.active} onClick={voice.stopTeacher} title="立即停止老师的语音回复"><Icon name="hand"/>打断</button></>}
+      <div className="volume-control"><button aria-label="播放音量" aria-expanded={volumeOpen} onClick={() => setVolumeOpen(v => !v)}><Icon name="volume"/>音量</button>{volumeOpen && <div className="volume-popover"><label>播放音量<input aria-label="老师音量" type="range" min="0" max="1" step="0.05" value={voice.volume} onChange={e => voice.setVolume(Number(e.target.value))}/></label><span>{Math.round(voice.volume * 100)}%</span></div>}</div>
       {voice.active && canAdvance && <button type="button" onClick={() => voice.send('', 'auto')}>继续讲解</button>}
       {voice.active && voice.state === 'paused' && <button type="button" onClick={voice.resume}>接着讲</button>}
     </div>

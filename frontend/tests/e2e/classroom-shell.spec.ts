@@ -1,8 +1,7 @@
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import { apiBase } from './environment';
-// Full Chromium includes the native PDF viewer; headless-shell does not.
-test.use({ channel: 'chromium' });
+// PDF.js renders the same page surface in desktop and headless browsers.
 
 async function cleanup(request: APIRequestContext) {
   const teachers = await (await request.get(`${apiBase}/api/teachers`)).json();
@@ -18,6 +17,7 @@ async function openClassroom(page: Page, request: APIRequestContext, name: strin
   await page.getByRole('button', { name: '课堂菜单', exact: true }).click();
   await page.getByRole('button', { name: `${name} A-level 数学`, exact: true }).click();
   await expect(page.getByTestId('teaching-board')).toBeVisible();
+  await expect(page.locator('.teacher-participant .participant-label span')).toHaveText(name);
   return teacher;
 }
 async function demonstrate(page: Page) {
@@ -46,19 +46,18 @@ test('classroom shell keeps the board mounted across resources, teacher switch a
     await page.keyboard.press('Control+Shift+z');
     await expect(page.locator('[data-author=student]')).toHaveCount(1);
     await expect(page.getByRole('status')).toHaveText('已保存到本机');
+    await page.getByRole('button', {name: '聊天', exact: true}).click();
     const before = (await board.boundingBox())!.width;
-    await page.getByRole('button', { name: '收起讲解', exact: true }).click();
+    await page.getByRole('button', { name: '聊天', exact: true }).click();
     expect((await board.boundingBox())!.width).toBeGreaterThan(before);
     await expect(page.getByRole('button', { name: '开始语音' })).toBeVisible();
-    await page.getByRole('button', { name: '展开讲解', exact: true }).click();
-    await page.getByRole('button', { name: '教材', exact: true }).click();
+    await page.getByRole('button', { name: '聊天', exact: true }).click();
+    await page.getByRole('button', { name: '教材', exact: true }).first().click();
     await page.locator('input[type=file]').setInputFiles('../samples/derivatives.pdf');
-    await page.getByRole('button', { name: 'derivatives.pdf', exact: true }).click();
-    await expect(page.getByTitle('教材预览：derivatives.pdf')).toHaveAttribute('src', /^blob:/);
+    await page.getByRole('button', { name: /derivatives.pdf/ }).click();
+    await expect(page.getByRole('toolbar', {name: '教材批注工具'}).getByRole('button', {name: '书写'})).toBeEnabled();
     await expect(page.locator('[data-author=student]')).toHaveCount(1);
     await mkdir('../docs/classroom-ui', { recursive: true });
-    await page.getByTitle('教材预览：derivatives.pdf').scrollIntoViewIfNeeded();
-    await page.waitForTimeout(1500); // Let the browser's out-of-process PDF compositor paint for visual QA.
     await page.screenshot({ path: '../docs/classroom-ui/materials.png' });
     await page.getByRole('button', { name: '返回课堂' }).click();
     await expect(page.locator('[data-author=student]')).toHaveCount(1);
@@ -86,7 +85,7 @@ test('narrow classroom opens on ink, maps zoomed coordinates and pans without wr
   try {
     await expect(page.locator('.conversation')).toBeHidden();
     await expect(page.getByRole('button', { name: '开始语音' })).toBeInViewport();
-    await expect(page.getByRole('button', { name: '结束本节' })).toBeInViewport();
+    await expect(page.getByRole('button', { name: '下课' })).toBeInViewport();
     const board = page.getByTestId('teaching-board');
     await page.getByLabel('白板缩放').selectOption('2');
     const geometry = await board.evaluate(svg => {
@@ -115,7 +114,7 @@ test('narrow classroom opens on ink, maps zoomed coordinates and pans without wr
     await expect(page.getByRole('status')).toHaveText('已保存到本机');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
     await page.screenshot({ path: '../docs/classroom-ui/narrow.png' });
-    await page.getByRole('button', { name: '展开讲解', exact: true }).click();
+    await page.getByRole('button', { name: '聊天', exact: true }).click();
     await expect(page.getByRole('textbox', { name: '给老师的消息' })).toBeInViewport();
     await page.screenshot({ path: '../docs/classroom-ui/narrow-explanation.png' });
     await page.getByRole('button', { name: '收起讲解面板' }).click();

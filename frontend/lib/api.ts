@@ -12,7 +12,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 export type Teacher = { id: string; name: string; subject: string; language: string; style: string; preferences: string; default_role: string };
 export type Message = { role: string; content: string };
 export type Decision = { action: string; reason: string; auto: boolean; role: string };
-export type Lesson = { id: string; teacher_id: string; state: string; mode: string; paused: boolean; messages: Message[]; board?: Record<string, unknown>; board_actions?: TeachingBoardAction[]; latest_observation_id?: string; pending_observation_id?: string | null; topic_index: number; current_exercise?: string; profile: Record<string, string>; plan?: string[]; summary?: unknown; last_decision?: Decision };
+export type Lesson = { id: string; teacher_id: string; classroom?: {document_id: string | null; page: number}; state: string; mode: string; paused: boolean; messages: Message[]; board?: Record<string, unknown>; board_actions?: TeachingBoardAction[]; latest_observation_id?: string; pending_observation_id?: string | null; topic_index: number; current_exercise?: string; profile: Record<string, string>; plan?: string[]; summary?: unknown; last_decision?: Decision };
 export type Turn = { lesson: Lesson; decision?: Decision; sources: Source[]; observation?: Observation; teaching_error?: string; skipped?: string };
 export type Source = { document_id: string; page: string; heading: string; content: string };
 export type Material = { id: string; name: string; pages: number; status: string; unreadable_pages: number[]; scope: string };

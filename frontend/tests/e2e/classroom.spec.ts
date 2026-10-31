@@ -13,15 +13,15 @@ test('student loop, PDF, whiteboard, persistence, pause, next lesson', async ({ 
   const name = 'Alex';
   await page.getByLabel('老师姓名').fill(name);
   await page.getByRole('button', { name: '创建并上课' }).click();
-  await expect(page.locator('.chat-header strong')).toHaveText(name);
+  await expect(page.locator('.teacher-participant .participant-label span')).toHaveText(name);
   const input = page.getByRole('textbox', { name: '给老师的消息' });
-  async function message(text: string) { await input.fill(text); await page.getByRole('button', { name: '发送消息' }).click(); await expect(input).toHaveValue(''); }
+  async function message(text: string) { if (!await input.isVisible()) await page.getByRole('button', {name: '聊天', exact: true}).click(); await input.fill(text); await page.getByRole('button', { name: '发送消息' }).click(); await expect(input).toHaveValue(''); }
   await message('我现在数学 B，还有一个月考试，我想冲 A*。');
-  await expect(page.getByText('你考的是 Edexcel、AQA，还是其他考试局？', { exact: true })).toBeVisible();
+  await expect(page.locator('.chat-scroll').getByText('你考的是 Edexcel、AQA，还是其他考试局？', { exact: true })).toBeVisible();
   await message('Edexcel');
   await page.locator('input[type=file]').setInputFiles('../samples/derivatives.pdf');
   await expect(page.getByText('derivatives.pdf', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '返回课堂', exact: true }).click();
+  await page.getByRole('button', { name: '关闭面板', exact: true }).click();
   await message('6x+2');
   await message('3x^2+2x');
   await message('12x^2-4x');
@@ -44,7 +44,7 @@ test('student loop, PDF, whiteboard, persistence, pause, next lesson', async ({ 
   await page.getByRole('button', { name: '课堂菜单', exact: true }).click();
   await page.getByRole('button', { name: '学习记录', exact: true }).click();
   await expect(page.getByText('链式法则', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '返回课堂', exact: true }).click();
+  await page.getByRole('button', { name: '关闭面板', exact: true }).click();
   await expect(page.locator('[data-element-id]').first()).toBeInViewport();
   await page.screenshot({ path: 'test-results/classroom.png', fullPage: true });
   await page.reload();
@@ -58,19 +58,23 @@ test('student loop, PDF, whiteboard, persistence, pause, next lesson', async ({ 
   await expect(page.locator('.state-pill')).toHaveText('独立练习');
   await message('6x(x^2+1)^2');
   await expect(page.locator('.state-pill')).toHaveText('回顾复习');
-  await page.getByRole('button', { name: '结束本节' }).click();
+  await page.getByRole('button', { name: '下课' }).click();
   await expect(page.locator('.state-pill')).toHaveText('课堂总结');
   await page.getByRole('button', { name: '开始下一节' }).click();
-  await expect(page.getByText('上次的学习记录还在。', { exact: false })).toBeVisible();
+  if (!await input.isVisible()) await page.getByRole('button', {name: '聊天', exact: true}).click();
+  await expect(page.locator('.chat-scroll').getByText('上次的学习记录还在。', { exact: false })).toBeVisible();
   expect(errors).toEqual([]);
   const teachers = await (await request.get(`${apiBase}/api/teachers`)).json();
   const teacher = teachers.find((t: { name: string }) => t.name === name);
   await request.delete(`${apiBase}/api/teachers/${teacher.id}`);
 });
 
-test('mobile workspace fits viewport', async ({ page }) => {
+test('mobile workspace fits viewport', async ({ page, request }) => {
+  const teachers = await (await request.get(`${apiBase}/api/teachers`)).json();
+  for (const t of teachers) if (t.name === 'Alex') await request.delete(`${apiBase}/api/teachers/${t.id}`);
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.route('**/api/teachers', route => route.fulfill({json: []}));
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: '还没有老师' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '开始第一节课' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });

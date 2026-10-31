@@ -100,7 +100,7 @@ export async function boot(page: Page, request: APIRequestContext) {
   const teacher = await (await request.post(backend + '/api/teachers', { data: { name: '语音仿真 SIM' } })).json();
   await page.goto('/');
   await page.evaluate(id => localStorage.setItem('banxue.lastTeacher', id), teacher.id); await page.reload();
-  await expect(page.locator('.chat-header strong')).toHaveText('语音仿真 SIM');
+  await expect(page.locator('.teacher-participant .participant-label span')).toHaveText('语音仿真 SIM');
   const lessons = await (await request.get(`${backend}/api/teachers/${teacher.id}/lessons`)).json();
   await page.getByRole('button', { name: '开始语音' }).click();
   await expect(page.getByRole('status').filter({ hasText: '正在听' })).toBeVisible({ timeout: 30000 });
@@ -110,7 +110,7 @@ export async function events(page: Page) { return page.evaluate(() => (window as
 export async function count(page: Page, type: string) { return (await events(page)).filter(e => e.type === type).length; }
 export async function inject(page: Page, kind = 'speech') { await page.evaluate(k => (window as SimWindow).voiceSim.mic(k), kind); }
 export async function typed(page: Page, text = '为什么用 chain rule') {
-  const input = page.getByRole('textbox', { name: '给老师的消息' }); await input.fill(text); await input.press('Enter');
+  const input = page.getByRole('textbox', { name: '给老师的消息' }); if (!await input.isVisible()) await page.getByRole('button', {name: '聊天', exact: true}).click(); await input.fill(text); await input.press('Enter');
 }
 export async function playing(page: Page) { await expect(page.getByRole('status').filter({ hasText: '正在讲解' })).toBeVisible(); }
 export async function stopped(page: Page) {

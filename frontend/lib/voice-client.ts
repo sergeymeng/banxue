@@ -20,6 +20,8 @@ export class VoiceClient {
   private closed = false;
   private closing?: Promise<void>;
   private muted = false;
+  private volume = 1;
+  setVolume(value: number) { this.volume = Math.max(0, Math.min(1, value)); this.player?.setVolume(this.volume); }
   private ready = false;
   private reply = '';
   private turn = '';
@@ -67,6 +69,7 @@ export class VoiceClient {
         this.emit({ ...receipt, type: 'playback_receipt', alignment: 'approximate_segment_boundary' });
         this.send(receipt);
       }, () => this.state());
+      this.player.setVolume(this.volume);
       await this.player.context.resume();
       const { MicVAD } = await import('@ricky0123/vad-web');
       if (this.closed) return;

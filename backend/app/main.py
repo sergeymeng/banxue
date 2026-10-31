@@ -14,8 +14,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy import text as sql
 
+from .classroom import install_classroom
 from .config import Settings
-from .db import Document, Event, Knowledge, Lesson, Teacher, Usage, database, uid
+from .db import Document, Event, Knowledge, Lesson, MaterialInk, Teacher, Usage, database, uid
 from .documents import index_chunks, parse_pdf, retrieve
 from .llm import Gateway, ModelError
 from .observations import install_observations
@@ -70,6 +71,7 @@ def create_app(settings=None, transport=None, vision_service=None):
     voice_sessions = install_voice(app, settings, factory, lock, transport)
     install_observations(app, settings, factory, lock, gateway,
                          vision_service or GatewayVisionService(gateway), voice_sessions)
+    install_classroom(app, settings, factory, lock)
     origins = settings.allowed_origins.split(",")
     app.add_middleware(
         CORSMiddleware,
@@ -309,6 +311,10 @@ def create_app(settings=None, transport=None, vision_service=None):
                 "schema_version": 1,
                 "teacher": {"id": teacher.id, **teacher.data},
                 "lessons": [public_lesson(r) for r in lessons],
+                "material_annotations": [
+                    {"lesson_id": r.lesson_id, "document_id": r.document_id, "page": r.page, **r.data}
+                    for r in db.scalars(select(MaterialInk).where(MaterialInk.lesson_id.in_(ids)))
+                ],
                 "knowledge": [r.data for r in db.scalars(select(Knowledge).where(Knowledge.teacher_id == teacher_id))],
                 "documents": [
                     {

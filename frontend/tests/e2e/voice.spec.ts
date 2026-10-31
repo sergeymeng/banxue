@@ -8,6 +8,7 @@ test('voice config missing is explicit and leaves text available', async ({ page
   await page.goto('/'); await expect(page.getByTestId('teaching-board')).toBeVisible(); await page.getByRole('button', { name: '课堂菜单', exact: true }).click(); await page.getByRole('button', { name: 'Voice E2E A-level 数学' }).click();
   await page.getByRole('button', { name: '开始语音' }).click();
   await expect(page.locator('.error[role=alert]')).toContainText('请先在设置中配置');
+  await page.getByRole('button', {name: '聊天', exact: true}).click();
   await expect(page.getByRole('textbox', { name: '给老师的消息' })).toBeEnabled();
   await request.delete(`${apiBase}/api/teachers/${teacher.id}`);
 });
@@ -54,6 +55,7 @@ test('bundled VAD detects synthetic speech and pauses native playback; stale fra
     if (JSON.parse(data).ticket) ws.send(JSON.stringify({ type: 'ready' }));
   }); });
   const teacher = await (await request.post(`${apiBase}/api/teachers`, { data: { name: 'Voice Runtime E2E' } })).json();
+  await request.post(`${apiBase}/api/teachers/${teacher.id}/documents`, {multipart: {file: {name: 'voice-class.pdf', mimeType: 'application/pdf', buffer: await readFile('tests/fixtures/classroom-pages.pdf')}}});
   await page.goto('/'); await expect(page.getByTestId('teaching-board')).toBeVisible(); await page.getByRole('button', { name: '课堂菜单', exact: true }).click(); await page.getByRole('button', { name: 'Voice Runtime E2E A-level 数学' }).click();
   await page.getByRole('button', { name: '开始语音' }).click();
   await expect(page.getByRole('status').filter({ hasText: '正在听' })).toBeVisible({ timeout: 30000 });
@@ -70,6 +72,24 @@ test('bundled VAD detects synthetic speech and pauses native playback; stale fra
   await mkdir('../docs/voice-evaluation', { recursive: true });
   await writeFile('../docs/voice-evaluation/browser-synthetic.json', JSON.stringify({ stimulus: 'macOS Tingting synthetic Chinese speech injected into MediaStream; mock cloud; no physical microphone/speaker', injection_to_observed_begin_ms: beginAt - injectedAt, physical_onset_to_speaker_stop_ms: null }, null, 2));
   await page.screenshot({ path: '../docs/voice-evaluation/voice-classroom.png' });
+  // Opening settings and resources must not terminate the live classroom.
+  await page.getByRole('button', {name: '课堂设置'}).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  expect(received.some(e => JSON.parse(e).type === 'stop')).toBe(false);
+  await page.getByRole('button', {name: '关闭', exact: true}).click();
+  await page.getByRole('button', {name: '教材', exact: true}).first().click();
+  await page.getByRole('button', {name: /voice-class.pdf/}).click();
+  await expect(page.getByRole('button', {name: '下一页'})).toBeEnabled();
+  await page.getByRole('button', {name: '下一页'}).click();
+  await expect(page.getByText('第 2 / 2 页')).toBeVisible();
+  await page.getByRole('tab', {name: '课堂白板'}).click();
+  await expect(page.getByTestId('teaching-board')).toBeVisible();
+  await expect(page.getByRole('button', {name: '关闭语音'})).toBeVisible();
+  expect(received.some(e => JSON.parse(e).type === 'stop')).toBe(false);
+  await page.getByRole('button', {name: '播放音量'}).click();
+  await page.getByRole('slider', {name: '老师音量'}).fill('0.35');
+  await expect(page.getByRole('slider', {name: '老师音量'})).toHaveValue('0.35');
+  await page.getByRole('button', {name: '播放音量'}).click();
   await page.getByRole('button', { name: '打断' }).click();
   await expect.poll(() => page.evaluate(() => (window as unknown as { voiceTest: { stops: number } }).voiceTest.stops)).toBeGreaterThan(0);
   const count = await page.evaluate(() => (window as unknown as { voiceTest: { starts: number } }).voiceTest.starts);

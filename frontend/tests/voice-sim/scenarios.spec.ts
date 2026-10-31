@@ -85,11 +85,7 @@ for (const stop of ['disconnect', 'device', 'leave']) test(`${stop} releases cap
   await expect.poll(async () => (await (await request.get(backend + '/__simulation/state')).json()).active.llm).toBe(1);
   if (stop === 'disconnect') await request.post(backend + '/__simulation/disconnect');
   if (stop === 'device') await page.evaluate(() => (window as SimWindow).voiceSim.unplug());
-  if (stop === 'leave') await page.getByRole('button', { name: '课堂菜单', exact: true }).click();
-  if (stop === 'leave') {
-    await page.getByRole('button', { name: '设置', exact: false }).click();
-    await page.getByRole('button', { name: '关闭', exact: true }).click();
-  }
+  if (stop === 'leave') await page.getByRole('button', {name: '下课', exact: true}).click();
   await stopped(page);
   const usage = await finish(page, request, info, ids);
   expect(usage.requests.some((r: { status: string; usage_source: string; estimated_cost_gbp: number }) =>
@@ -110,5 +106,19 @@ test('synthetic keyboard and residual echo: observe VAD, recover possible false 
   await expect.poll(() => count(page, 'resume')).toBe(pauses);
   await playing(page);
   await info.attach('echo-scope', { body: 'Synthetic residual speech enters after microphone capture. This measures VAD/recovery only; browser AEC and physical speaker echo are not simulated or certified.', contentType: 'text/plain' });
+  await finish(page, request, info, ids);
+});
+
+test('pause closes active audio; resume reconnects the same classroom once and accepts the next question', async ({page, request}, info) => {
+  const ids = await boot(page, request);
+  await scenario(request, {answer: '这是暂停前的讲解。', audio_seconds: 6});
+  await typed(page); await playing(page);
+  await page.getByRole('button', {name: '暂停', exact: true}).click();
+  await expect(page.locator('.state-pill')).toHaveText('已暂停'); await stopped(page);
+  await page.getByRole('button', {name: '继续上课', exact: true}).click();
+  await expect(page.getByRole('status').filter({hasText: '正在听'})).toBeVisible({timeout: 15000});
+  expect(await count(page, 'ready')).toBe(2);
+  await scenario(request, {answer: '这是恢复后的新讲解。', audio_seconds: 6});
+  await typed(page, '再讲一下这一步'); await playing(page);
   await finish(page, request, info, ids);
 });
