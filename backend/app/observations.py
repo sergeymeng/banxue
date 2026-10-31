@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from .db import Event, Lesson, Teacher, uid
 from .llm import ModelError
+from .observation_binding import assert_current, board_binding, lesson_context
 from .service import public_lesson, turn
 from .vision import Confirmation, ObserveInput, inspect_png
 
@@ -45,7 +46,14 @@ def install_observations(app, settings, factory, lock, gateway, vision, voice_se
     @app.get("/api/lessons/{lesson_id}/observations/{observation_id}")
     def detail(lesson_id: str, observation_id: str):
         with factory() as db:
-            return record(db, lesson_id, observation_id).data
+            entry = record(db, lesson_id, observation_id).data
+            stale_reason = None
+            if entry["status"] == "pending":
+                try:
+                    assert_current(lesson_record(db, lesson_id), entry, db)
+                except HTTPException as exc:
+                    stale_reason = exc.detail
+            return {**entry, "stale_reason": stale_reason}
 
     @app.post("/api/lessons/{lesson_id}/observe")
     @app.post("/api/lessons/{lesson_id}/observations")
@@ -65,10 +73,13 @@ def install_observations(app, settings, factory, lock, gateway, vision, voice_se
                 if settings.model_mode == "demo":
                     return {"skipped": "离线演示不具备视觉识别。请配置真实 VISION_MODEL；可在消息中提交表达式。"}
                 source = body.source.model_dump()
+                binding = board_binding(row, source)
+                context = lesson_context(row, db)
                 fingerprint = {
                     "image": image_info["sha256"],
                     "source": source,
-                    "lesson_context": {"state": s["state"], "topic_index": s.get("topic_index")},
+                    "lesson_context": context,
+                    "board_binding": binding,
                 }
                 if fingerprint == s.get("observed_fingerprint"):
                     existing = record(db, lesson_id, s["latest_observation_id"])
@@ -101,7 +112,8 @@ def install_observations(app, settings, factory, lock, gateway, vision, voice_se
                             "image": body.image,
                             "observation": observation,
                             "trigger": body.trigger,
-                            "lesson_context": {"state": s["state"], "topic_index": s.get("topic_index")},
+                            "lesson_context": context,
+                            "board_binding": binding,
                         },
                     )
                 )
@@ -140,18 +152,19 @@ def install_observations(app, settings, factory, lock, gateway, vision, voice_se
                 original = entry.data["observation"]
                 submitted = body.model_dump()
                 if entry.data["status"] == "confirmed":
-                    if submitted != entry.data["confirmation"]:
+                    if submitted != Confirmation.model_validate(entry.data["confirmation"]).model_dump():
                         raise HTTPException(409, "此记录已确认；请重新选区建立新的观察。")
                     return result(row, entry.data["reviewed"], already_confirmed=True)
                 if row.data.get("pending_observation_id") != observation_id:
                     raise HTTPException(409, "已有更新的区域图片，请核对最新观察。")
                 if row.data.get("paused") or row.data["state"] == "SESSION_SUMMARY" or lesson_id in voice_sessions:
                     raise HTTPException(409, "请先恢复文字课堂，再确认识别结果。")
-                if entry.data["lesson_context"] != {
-                    "state": row.data["state"],
-                    "topic_index": row.data.get("topic_index"),
-                }:
-                    raise HTTPException(409, "课堂题目或阶段已变化，请重新选区识别。")
+                assert_current(row, entry.data, db)
+                if (
+                    original["source"]["kind"] == "whiteboard_region"
+                    and body.board_revision != original["source"]["revision"]
+                ):
+                    raise HTTPException(409, "请等待白板保存后，再核对当前版本。")
                 if body.image_sha256 != original["source"]["sha256"]:
                     raise HTTPException(409, "图片版本不匹配，请重新打开观察记录。")
                 if set(body.resolutions) != {a["id"] for a in original["ambiguities"]} or any(
@@ -194,6 +207,7 @@ def install_observations(app, settings, factory, lock, gateway, vision, voice_se
                     "steps": [s.model_dump() for s in body.steps if s.mark == "active"],
                     "visible_text": reviewed["visible_text"],
                     "image_sha256": body.image_sha256,
+                    "source": original["source"],
                 }
                 row.data = {**row.data, "observation": teaching_observation, "pending_observation_id": None}
                 db.commit()  # Review survives a failed teaching call. Duplicate confirmation never bills twice.

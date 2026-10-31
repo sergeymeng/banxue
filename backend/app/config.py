@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     vision_base_url: str = "https://api.openai.com/v1"
     fast_model: str = "gpt-4.1-mini"
     reasoning_model: str = "gpt-4.1"
+    vision_adapter: Literal["chat_completions", "qwen_vl"] = "chat_completions"
     vision_model: str = "gpt-4.1-mini"
     fast_api_key: str = ""
     reasoning_api_key: str = ""

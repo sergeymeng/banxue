@@ -42,13 +42,29 @@ class ImageSource(StrictModel):
     kind: Literal["whiteboard_region", "upload", "fixture", "legacy_page"]
     page_id: str = Field(default="", max_length=200)
     snapshot_id: str = Field(default="", max_length=200)
+    revision: int | None = Field(default=None, ge=0, le=9007199254740991, strict=True)
+    element_ids: list[Annotated[str, Field(min_length=1, max_length=200)]] = Field(
+        default_factory=list, max_length=1000
+    )
+    author: Literal["student"] | None = None
     region: BoardRect | None = None
     label: str = Field(default="", max_length=200)
 
     @model_validator(mode="after")
     def board_reference(self):
-        if self.kind == "whiteboard_region" and (not self.page_id or not self.snapshot_id or not self.region):
-            raise ValueError("whiteboard region needs page_id, snapshot_id and region")
+        if self.kind == "whiteboard_region":
+            if (
+                self.page_id != "main"
+                or self.revision is None
+                or not self.region
+                or self.author != "student"
+                or not self.element_ids
+            ):
+                raise ValueError("student region needs main page, revision, region and element_ids")
+            if self.snapshot_id != f"banxue-board:v1:{self.revision}" or len(set(self.element_ids)) != len(
+                self.element_ids
+            ):
+                raise ValueError("invalid snapshot_id or duplicate element_ids")
         return self
 
 
@@ -102,6 +118,7 @@ class Confirmation(StrictModel):
     steps: list[Step] = Field(min_length=1, max_length=40)
     resolutions: dict[str, Annotated[str, Field(min_length=1, max_length=500)]] = Field(default_factory=dict)
     step_complete: bool = False
+    board_revision: int | None = Field(default=None, ge=0, le=9007199254740991, strict=True)
 
     @model_validator(mode="after")
     def valid_steps(self):
@@ -158,10 +175,11 @@ class GatewayVisionService:
 
     def __init__(self, gateway):
         self.gateway = gateway
+        self.protocol = gateway.settings.vision_adapter
 
     def provenance(self):
         return {
-            "adapter": "chat_completions",
+            "adapter": self.protocol,
             "model": self.gateway.settings.vision_model,
             "mode": "live",
             "prompt_version": "region-v1",
@@ -181,6 +199,12 @@ class GatewayVisionService:
             + json.dumps(Transcription.model_json_schema(), ensure_ascii=False)
         )
         raw = await self.gateway.complete(
-            db, lesson_id, "vision", [{"role": "system", "content": prompt}], image=image, image_detail="high"
+            db,
+            lesson_id,
+            "vision",
+            [{"role": "system", "content": prompt}],
+            image=image,
+            image_detail="high",
+            vision_protocol=self.protocol,
         )
         return parse_transcription(raw)
