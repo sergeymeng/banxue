@@ -63,6 +63,10 @@ def bind_handwriting_observation(db, lesson, s):
     entry, receipt = original.data, confirmation.data
     source = (entry.get("observation") or {}).get("source") or {}
     context = {"state": s["state"], "topic_index": s.get("topic_index")}
+    if "last_turn_id" in entry.get("lesson_context", {}):
+        # Imported at call time: observation_binding also uses service.public_lesson.
+        from .observation_binding import lesson_context
+        context = lesson_context(lesson, db)
     if (
         entry.get("type") != "region_observation"
         or entry.get("status") != "confirmed"

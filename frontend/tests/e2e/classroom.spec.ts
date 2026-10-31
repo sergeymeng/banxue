@@ -39,7 +39,8 @@ test('student loop, PDF, whiteboard, persistence, pause, next lesson', async ({ 
   await expect(page.getByText('离线演示不具备视觉识别。', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: '白板更多功能' }).click();
   await page.getByRole('button', { name: '添加老师便签' }).click();
-  await expect(page.locator('[data-element-id]')).toHaveCount(2);
+  await expect(page.locator('[data-author="student"]')).toHaveCount(1);
+  await expect(page.locator('[data-author="teacher"]').first()).toBeVisible();
   await page.getByRole('button', { name: '课堂菜单', exact: true }).click();
   await page.getByRole('button', { name: '学习记录', exact: true }).click();
   await expect(page.getByText('链式法则', { exact: true })).toBeVisible();
@@ -48,7 +49,8 @@ test('student loop, PDF, whiteboard, persistence, pause, next lesson', async ({ 
   await page.screenshot({ path: 'test-results/classroom.png', fullPage: true });
   await page.reload();
   await expect(page.locator('.state-pill')).toHaveText('引导练习');
-  await expect(page.locator('[data-element-id]')).toHaveCount(2);
+  await expect(page.locator('[data-author="student"]')).toHaveCount(1);
+  await expect(page.locator('[data-author="teacher"]').first()).toBeVisible();
   await page.getByRole('button', { name: '暂停', exact: true }).click();
   await expect(page.locator('.state-pill')).toHaveText('已暂停');
   await page.getByRole('button', { name: '继续上课' }).click();

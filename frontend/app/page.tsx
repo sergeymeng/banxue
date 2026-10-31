@@ -3,7 +3,9 @@ import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Settings from '@/components/Settings';
 import MaterialReader from '@/components/MaterialReader';
-import type { BoardController } from '@/lib/whiteboard/types';
+import ObservationReview from '@/components/ObservationReview';
+import { useClassroomBoard } from '@/lib/use-classroom-board';
+import type { BoardController, BoardEvent } from '@/lib/whiteboard/types';
 import VoiceControls from '@/components/VoiceControls';
 import { useVoice } from '@/lib/use-voice';
 import Icon from '@/components/Icon';
@@ -30,7 +32,7 @@ export default function Home() {
   const [conversationOpen, setConversationOpen] = useState(true);
   const [reading, setReading] = useState<Material | null>(null);
   const board = useRef<BoardController | null>(null);
-  const boardReady = useCallback((controller: BoardController | null) => { board.current = controller; }, []);
+  const [boardRevision, setBoardRevision] = useState<number>();
   const [loading, setLoading] = useState(true);
   const [desktop, setDesktop] = useState(false);
   const [mode, setMode] = useState<'policy' | 'baseline'>('policy');
@@ -62,8 +64,24 @@ export default function Home() {
     void refresh(result.lesson).catch(e => report(e.message));
   }, [refresh, report]);
   const voice = useVoice(lesson, modal === null, receive, report);
+  const classroomBoard = useClassroomBoard(lesson, report, voice.subscribe);
+  const attachBoard = classroomBoard.onReady;
+  const handleBoardEvent = classroomBoard.onBoardEvent;
+  const boardReady = useCallback((controller: BoardController | null) => {
+    board.current = controller; setBoardRevision(controller?.getSnapshot().revision); attachBoard(controller);
+  }, [attachBoard]);
+  const boardChanged = useCallback((event: BoardEvent) => {
+    if (event.type === 'edit') setBoardRevision(event.revision);
+    handleBoardEvent(event);
+  }, [handleBoardEvent]);
+  const beforeConfirm = useCallback(async () => {
+    const controller = board.current;
+    if (!controller) throw new Error('白板尚未就绪。');
+    controller.pause(); await controller.flush(); return controller.getSnapshot().revision;
+  }, []);
   const send = useCallback(async (event = 'message', text = '') => {
     if (!lesson) return;
+    if (event !== 'auto') classroomBoard.pauseForInput();
     if (voice.active) {
       if (event === 'end' || event === 'pause') await voice.stop();
       else { if (voice.send(text, event)) setDraft(''); return; }
@@ -71,10 +89,10 @@ export default function Home() {
     setBusy(true); setError('');
     try { if (event === 'end') await board.current?.flush(); const result = await api<Turn>(`/api/lessons/${lesson.id}/turn`, { method: 'POST', body: JSON.stringify({ event, text }) }); receive(result); if (event === 'message' || event === 'topic') setDraft(''); }
     catch (e) { report((e as Error).message); void refresh(lesson); }
-    finally { setBusy(false); }
-  }, [lesson, receive, report, refresh, voice]);
+    finally { setBusy(false); classroomBoard.inputSettled(); }
+  }, [lesson, receive, report, refresh, voice, classroomBoard]);
   useEffect(() => {
-    if (!lesson?.last_decision?.auto || lesson.paused || busy || draft || voice.active) return;
+    if (!lesson?.last_decision?.auto || lesson.paused || lesson.pending_observation_id || busy || draft || voice.active) return;
     const timer = setTimeout(() => void send('auto'), 1600);
     return () => clearTimeout(timer);
   }, [lesson, busy, draft, send, voice.active]);
@@ -155,7 +173,7 @@ export default function Home() {
       {error && <div className="error" role="alert"><span>{error}</span><button className="icon-button" onClick={() => setError('')} aria-label="关闭错误"><Icon name="close" size={14}/></button></div>}
       <input ref={fileInput} type="file" accept="application/pdf" hidden onChange={e => void upload(e.target.files?.[0])}/>
       {!lesson ? <div className="empty-workspace">{loading ? <p>正在打开课堂…</p> : <><Icon name="teacher" size={38}/><h2>{teachers.length ? '选择一位老师' : '还没有老师'}</h2><p>{teachers.length ? '从左侧选择老师，继续上次的课。' : '添加一位数学老师，开始第一节课。'}</p><button onClick={() => setModal('teacher')} className="primary"><Icon name="plus" size={14}/>添加老师</button></>}</div> : <>
-        <div className={`classroom ${conversationOpen ? '' : 'conversation-collapsed'}`} inert={view !== 'classroom' || navigationOpen}><div className="workspace"><Whiteboard key={lesson.id} lesson={lesson} onResult={receive} onError={report} annotation={annotation} disabled={busy || lesson.paused || lesson.state === 'SESSION_SUMMARY'} live={config?.mode === 'live' && !voice.active} onReady={boardReady}/></div>
+        <div className={`classroom ${conversationOpen ? '' : 'conversation-collapsed'}`} inert={view !== 'classroom' || navigationOpen}><div className="workspace"><ObservationReview key={`review-${lesson.id}`} lesson={lesson} disabled={busy || lesson.paused || lesson.state === 'SESSION_SUMMARY'} live={config?.mode === 'live'} voiceActive={voice.active} boardRevision={boardRevision} beforeConfirm={beforeConfirm} onResult={receive} onError={report}/><Whiteboard key={lesson.id} lesson={lesson} onResult={receive} onError={report} annotation={annotation} disabled={busy || lesson.paused || lesson.state === 'SESSION_SUMMARY'} live={config?.mode === 'live' && !voice.active} onReady={boardReady} onBoardEvent={boardChanged}/></div>
           <section className="conversation" hidden={!conversationOpen}><div className="chat-header"><div><span className="eyebrow">老师讲解</span><strong>{teacher?.name}</strong></div><button className="icon-button" aria-label="收起讲解面板" onClick={() => setConversationOpen(false)}><Icon name="close"/></button></div><div className="chat-scroll">{lesson.messages.map((m, i) => <div key={i} className={`message ${m.role}`}><span className="message-author">{m.role === 'user' ? '你' : teacher?.name}</span><div>{m.content}</div></div>)}{voice.text && <div className="message assistant"><span className="message-author">{teacher?.name}</span><div>{voice.text}</div></div>}{busy && <div className="thinking">正在处理…</div>}<div ref={messagesEnd}/></div>
             {sources.length > 0 && <details className="chat-sources"><summary>本轮参考了 {sources.length} 处教材</summary>{sources.map((s, i) => <p key={i}>{materials.find(d => d.id === s.document_id)?.name || '教材'} · 第 {s.page} 页</p>)}</details>}
             <div className="quick-actions"><button disabled={busy} onClick={() => void send('hint')}>给一点提示</button><button disabled={busy} onClick={() => void send('reexplain')}>重新解释</button></div>

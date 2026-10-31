@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { api, Lesson, Turn } from '@/lib/api';
+import { prepareStudentRegion, submitRegion } from '@/lib/handwriting';
 import { ObservationGate } from '@/lib/observation-gate';
 import { BoardEngine, HEIGHT, WIDTH } from '@/lib/whiteboard/engine';
 import { exportBoard, path, textLines } from '@/lib/whiteboard/render';
@@ -102,9 +103,10 @@ export default function Whiteboard(props: Props) {
     if (!board || observing.current || disabled) return;
     observing.current = true; setAnalyzing(true);
     try {
-      const exported = await board.exportRegion({ region: selection, author: 'student' });
-      gate.current.sent(Date.now()); await board.flush();
-      const result = await api<Turn>(`/api/lessons/${lesson.id}/observe`, { method: 'POST', body: JSON.stringify({ image: exported.image, trigger, step_complete: trigger === 'explicit' }) });
+      board.pause();
+      const region = await prepareStudentRegion(board, selection);
+      gate.current.sent(Date.now());
+      const result = await submitRegion(lesson.id, { ...region, trigger });
       if (controller.current !== board) return;
       if (result.skipped) setStatus(result.skipped);
       else { props.onResult(result); setStatus(result.observation ? '识别结果待核对，请打开原图核对。' : '观察完成'); }

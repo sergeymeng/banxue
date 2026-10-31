@@ -40,6 +40,7 @@ const os = require('node:os');
     await page.getByRole('button', { name: '立即停止老师' }).click();
     await page.getByRole('button', { name: '结束语音', exact: true }).click();
     await expect(page.getByRole('button', { name: '开始语音课堂' })).toBeVisible();
+    await page.getByRole('button', { name: '课堂菜单', exact: true }).click();
     await page.getByRole('button', { name: /设置/ }).click();
     await expect(page.getByLabel('千问 API Key')).toHaveValue('');
     await page.screenshot({ path: path.join(root, 'docs/voice-evaluation/desktop-qwen-settings.png') });

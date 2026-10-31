@@ -4,9 +4,9 @@ export type TeachingBoardAction = {
   action_id: string; kind: string; text: string; exercise_key: string;
   status: 'proposed' | 'executed' | 'cancelled' | 'failed';
 };
-export type BoardLesson = { id: string; paused: boolean; state: string; board_actions?: TeachingBoardAction[] };
+export type BoardLesson = { id: string; paused: boolean; state: string; pending_observation_id?: string | null; board_actions?: TeachingBoardAction[] };
 export type Delivery = { event_id: string; action_id: string; status: 'executed' | 'cancelled' | 'failed'; revision: number };
-export type ClassroomVoiceEvent = { type: string; lesson_id: string; state?: string };
+export type ClassroomVoiceEvent = { type: string; lesson_id: string; state?: string; session_id?: string; sequence?: number; turn_id?: string | null };
 
 /** Connects three independently owned modules. It never interprets student answers. */
 export class ClassroomBoardBridge {
@@ -15,19 +15,32 @@ export class ClassroomBoardBridge {
   private controllerLesson: string | null = null;
   private held = false;
   private resumeCandidate = false;
+  private voiceSession: string | null = null;
+  private voiceTurn: string | null = null;
+  private voiceSequence = 0;
   private acknowledgements = new Set<string>();
   private delivery = Promise.resolve();
   constructor(private report: (lessonId: string, receipts: Delivery[]) => Promise<void>, private error: (message: string) => void) {}
 
   attach(controller: BoardController | null, lessonId: string | null) { this.controller = controller; this.controllerLesson = lessonId; this.sync(); }
   update(lesson: BoardLesson | null) {
-    if (this.lesson?.id !== lesson?.id) { this.acknowledgements.clear(); this.held = false; this.resumeCandidate = false; }
+    if (this.lesson?.id !== lesson?.id) { this.acknowledgements.clear(); this.held = false; this.resumeCandidate = false; this.voiceSession = null; this.voiceTurn = null; this.voiceSequence = 0; }
     this.lesson = lesson; this.sync();
   }
   pauseForInput() { this.held = true; this.controller?.pause(); }
   inputSettled() { this.held = false; this.sync(); }
   voice(event: ClassroomVoiceEvent) {
-    if (event.lesson_id !== this.lesson?.id || !this.controller) return;
+    if (event.lesson_id !== this.lesson?.id || this.controllerLesson !== event.lesson_id || !this.controller) return;
+    if (event.session_id) {
+      if (event.session_id !== this.voiceSession) {
+        if (this.voiceSession && !(event.type === 'state_changed' && event.state === 'connecting')) return;
+        this.voiceSession = event.session_id; this.voiceSequence = 0; this.voiceTurn = null;
+      }
+      if (event.sequence !== undefined && event.sequence <= this.voiceSequence) return;
+      this.voiceSequence = event.sequence ?? this.voiceSequence;
+    }
+    if (event.type === 'turn_started') this.voiceTurn = event.turn_id ?? null;
+    else if (event.turn_id && this.voiceTurn && event.turn_id !== this.voiceTurn) return;
     if (event.type === 'candidate_paused') {
       this.resumeCandidate = this.controller.getQueue().state === 'running';
       this.held = true; this.controller.pause();
@@ -50,7 +63,7 @@ export class ClassroomBoardBridge {
     const board = this.controller, lesson = this.lesson;
     if (!board || !lesson || this.controllerLesson !== lesson.id) return;
     const actions = lesson.board_actions ?? [];
-    if (lesson.paused || lesson.state === 'SESSION_SUMMARY') { board.pause(); return; }
+    if (lesson.paused || lesson.pending_observation_id || lesson.state === 'SESSION_SUMMARY') { board.pause(); return; }
     const queue = board.getQueue();
     const proposed = new Set(actions.filter(a => a.status === 'proposed').map(a => a.action_id));
     if (queue.steps.some(r => r.status === 'pending' && r.batchId.startsWith('lesson-') && !proposed.has(r.action.id))) board.cancel();

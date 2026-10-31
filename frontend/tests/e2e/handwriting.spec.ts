@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 test('region review, edit, reload and confirmation (mock only)', async ({ page, request }) => {
-  const base = process.env.HANDWRITING_E2E_API_URL || 'http://127.0.0.1:8100';
+  const base = process.env.HANDWRITING_E2E_API_URL || `http://127.0.0.1:${process.env.E2E_BACKEND_PORT || '8100'}`;
   const teacher = await (await request.post(`${base}/api/teachers`, { data: { name: 'Handwriting E2E' } })).json();
   const lesson = await (await request.post(`${base}/api/teachers/${teacher.id}/lessons`, { data: {} })).json();
   const binary = readFileSync('public/handwriting/fraction.png');
@@ -77,7 +77,7 @@ test('region review, edit, reload and confirmation (mock only)', async ({ page, 
 
 test('demo shows synthetic region without pretending to recognize it', async ({ page, request }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  const base = process.env.HANDWRITING_E2E_API_URL || 'http://127.0.0.1:8100';
+  const base = process.env.HANDWRITING_E2E_API_URL || `http://127.0.0.1:${process.env.E2E_BACKEND_PORT || '8100'}`;
   const teacher = await (await request.post(`${base}/api/teachers`, { data: { name: 'Handwriting Demo E2E' } })).json();
   await page.addInitScript(id => localStorage.setItem('banxue.lastTeacher', id), teacher.id);
   await page.goto('/');
