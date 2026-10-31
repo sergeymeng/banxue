@@ -1,0 +1,178 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "fraction",
+      "image": "frontend/public/handwriting/fraction.png",
+      "sha256": "6cc59b473f205513db081723f9bf5c3411f78591a0ad5de98e7a59df954dbf8f",
+      "tags": [
+        "fraction",
+        "denominator"
+      ],
+      "origin": "synthetic_font_and_pen_strokes",
+      "expected": [
+        {
+          "text": "y = (x + 1)/(2x)",
+          "expressions": [
+            "y=\\frac{x+1}{2x}"
+          ],
+          "mark": "active"
+        }
+      ]
+    },
+    {
+      "id": "exponent",
+      "image": "frontend/public/handwriting/exponent.png",
+      "sha256": "0aef923be040f8ba7f0b4cef1594319c45238c1b10b1175ca7cf8d8e1b6a05b1",
+      "tags": [
+        "exponent",
+        "negative_exponent",
+        "multiline"
+      ],
+      "origin": "synthetic_font_and_pen_strokes",
+      "expected": [
+        {
+          "text": "y = x^2 + x^-1",
+          "expressions": [
+            "y=x^{2}+x^{-1}"
+          ],
+          "mark": "active"
+        },
+        {
+          "text": "y' = 2x - x^-2",
+          "expressions": [
+            "y'=2x-x^{-2}"
+          ],
+          "mark": "active"
+        }
+      ]
+    },
+    {
+      "id": "negative",
+      "image": "frontend/public/handwriting/negative.png",
+      "sha256": "d1c7d02c41165029f4bf8f44bdd045ee1157a039ad1d97c7bf33c6a64acb2358",
+      "tags": [
+        "minus",
+        "parentheses"
+      ],
+      "origin": "synthetic_font_and_pen_strokes",
+      "expected": [
+        {
+          "text": "y = -(x - 2)",
+          "expressions": [
+            "y=-(x-2)"
+          ],
+          "mark": "active"
+        },
+        {
+          "text": "y = -x + 2",
+          "expressions": [
+            "y=-x+2"
+          ],
+          "mark": "active"
+        }
+      ]
+    },
+    {
+      "id": "parentheses",
+      "image": "frontend/public/handwriting/parentheses.png",
+      "sha256": "d428acdffa3cc3723143399b3d1a3b408be2261a996ba4f60e92add5560124ff",
+      "tags": [
+        "parentheses",
+        "multiline",
+        "wrong_math_preserved"
+      ],
+      "origin": "synthetic_font_and_pen_strokes",
+      "expected": [
+        {
+          "text": "y = (x + 1)(x - 1)",
+          "expressions": [
+            "y=(x+1)(x-1)"
+          ],
+          "mark": "active"
+        },
+        {
+          "text": "y = x + 1 - x - 1",
+          "expressions": [
+            "y=x+1-x-1"
+          ],
+          "mark": "active"
+        },
+        {
+          "text": "y = 0",
+          "expressions": [
+            "y=0"
+          ],
+          "mark": "active"
+        }
+      ]
+    },
+    {
+      "id": "mixed",
+      "image": "frontend/public/handwriting/mixed.png",
+      "sha256": "7c0ddcbfdcabadba58e27920b4d290dc7fe59cac9f6f49c77eddfaa0ecb8caf8",
+      "tags": [
+        "chinese",
+        "english",
+        "multiline"
+      ],
+      "origin": "synthetic_font_and_pen_strokes",
+      "expected": [
+        {
+          "text": "先求 derivative",
+          "expressions": [],
+          "mark": "active"
+        },
+        {
+          "text": "令 u = 2x + 1",
+          "expressions": [
+            "u=2x+1"
+          ],
+          "mark": "active"
+        },
+        {
+          "text": "所以 du/dx = 2",
+          "expressions": [
+            "\\frac{du}{dx}=2"
+          ],
+          "mark": "active"
+        }
+      ]
+    },
+    {
+      "id": "correction",
+      "image": "frontend/public/handwriting/correction.png",
+      "sha256": "43077e4c6e4d0b7e99d4d5eae861b3e8c96357f9d6f028edf3140cb1d891a90d",
+      "tags": [
+        "crossed_out",
+        "replacement",
+        "order_ambiguity"
+      ],
+      "origin": "synthetic_font_and_pen_strokes",
+      "expected": [
+        {
+          "text": "3x^2",
+          "expressions": [
+            "3x^{2}"
+          ],
+          "mark": "crossed_out"
+        },
+        {
+          "text": "y' = 2x",
+          "expressions": [
+            "y'=2x"
+          ],
+          "mark": "active"
+        },
+        {
+          "text": "y = x^2",
+          "expressions": [
+            "y=x^{2}"
+          ],
+          "mark": "active"
+        }
+      ],
+      "review_note": "原位置划掉 3x²，右侧改为 2x；允许按行分组，但不能把涂掉项作为有效结果。"
+    }
+  ]
+}

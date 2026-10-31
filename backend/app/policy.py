@@ -101,12 +101,12 @@ class TeachingPolicy:
             return Decision("HINT", item["hint"], "student_hint")
         if event == "board":
             obs = s.get("observation", {})
-            if obs.get("confidence", 0) < 0.8 or not obs.get("step_complete"):
+            if not obs.get("confirmed") or not obs.get("step_complete"):
                 return Decision("WAIT", "白板尚不足以可靠判断完整步骤，保持安静。", "uncertain_observation")
             s["assisted"] = True
             return Decision(
                 "ASK",
-                "根据可见步骤提一个简短检查问题，不直接宣判错误。观察：" + str(obs.get("visible_text", ""))[:800],
+                "根据课堂数据中学生已核对的步骤提一个简短检查问题；涂掉的内容不作为有效步骤，不直接宣判错误。",
                 "completed_step",
                 "reasoning",
             )
@@ -196,6 +196,6 @@ class TeachingPolicy:
 
 class BaselinePolicy:
     def decide(self, s, text="", event="message", result=None):
-        if event in ["end", "pause", "resume"] or s.get("paused") or s["state"] == "SESSION_SUMMARY":
+        if event in ["end", "pause", "resume", "board"] or s.get("paused") or s["state"] == "SESSION_SUMMARY":
             return TeachingPolicy().decide(s, text, event, result)
         return Decision("EXPLAIN", "根据用户消息自然回应。不要报告未测量的掌握程度。", "baseline", "fast")

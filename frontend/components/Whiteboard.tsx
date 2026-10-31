@@ -41,7 +41,7 @@ export default function Whiteboard({ lesson, onResult, onError, annotation, disa
       if (result.skipped) setStatus(result.skipped);
       else {
         onResult(result);
-        setStatus(result.observation ? `可见内容：${result.observation.visible_text || '不清晰'} · 置信度 ${Math.round(result.observation.confidence * 100)}%` : '观察完成');
+        setStatus(result.observation ? '识别结果待核对，请打开“区域识别与核对”。' : '观察完成');
       }
     } catch (error) { onError((error as Error).message); }
     finally { busy.current = false; setAnalyzing(false); }

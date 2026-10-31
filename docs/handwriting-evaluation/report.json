@@ -1,0 +1,66 @@
+{
+  "created_at": "2026-10-31T00:37:02.944448+00:00",
+  "dataset": "synthetic-v1",
+  "mode": "not_run",
+  "cases": [
+    {
+      "id": "fraction",
+      "status": "not_run",
+      "sha256": "6cc59b473f205513db081723f9bf5c3411f78591a0ad5de98e7a59df954dbf8f",
+      "tags": [
+        "fraction",
+        "denominator"
+      ]
+    },
+    {
+      "id": "exponent",
+      "status": "not_run",
+      "sha256": "0aef923be040f8ba7f0b4cef1594319c45238c1b10b1175ca7cf8d8e1b6a05b1",
+      "tags": [
+        "exponent",
+        "negative_exponent",
+        "multiline"
+      ]
+    },
+    {
+      "id": "negative",
+      "status": "not_run",
+      "sha256": "d1c7d02c41165029f4bf8f44bdd045ee1157a039ad1d97c7bf33c6a64acb2358",
+      "tags": [
+        "minus",
+        "parentheses"
+      ]
+    },
+    {
+      "id": "parentheses",
+      "status": "not_run",
+      "sha256": "d428acdffa3cc3723143399b3d1a3b408be2261a996ba4f60e92add5560124ff",
+      "tags": [
+        "parentheses",
+        "multiline",
+        "wrong_math_preserved"
+      ]
+    },
+    {
+      "id": "mixed",
+      "status": "not_run",
+      "sha256": "7c0ddcbfdcabadba58e27920b4d290dc7fe59cac9f6f49c77eddfaa0ecb8caf8",
+      "tags": [
+        "chinese",
+        "english",
+        "multiline"
+      ]
+    },
+    {
+      "id": "correction",
+      "status": "not_run",
+      "sha256": "43077e4c6e4d0b7e99d4d5eae861b3e8c96357f9d6f028edf3140cb1d891a90d",
+      "tags": [
+        "crossed_out",
+        "replacement",
+        "order_ambiguity"
+      ]
+    }
+  ],
+  "note": "Literal differences require human review; equivalent LaTeX/grouping may differ. No calibrated accuracy."
+}

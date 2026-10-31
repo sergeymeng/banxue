@@ -21,7 +21,7 @@ class Gateway:
         self.settings = settings
         self.transport = transport
 
-    async def complete(self, db, lesson_id, role, messages, *, image=None, on_delta=None):
+    async def complete(self, db, lesson_id, role, messages, *, image=None, on_delta=None, image_detail="low"):
         cfg, settings = self.settings.role(role), self.settings
         if settings.model_mode == "demo":
             raise ModelError("演示模式不会调用模型。")
@@ -38,7 +38,8 @@ class Gateway:
         prompt_estimate = sum(tokens(m["content"]) + 12 for m in messages)
         if image:
             prompt_estimate += settings.vision_token_allowance
-        reserve = (prompt_estimate * cfg["input_gbp"] + settings.max_output_tokens * cfg["output_gbp"]) / 1e6
+        output_limit = settings.vision_max_output_tokens if role == "vision" else settings.max_output_tokens
+        reserve = (prompt_estimate * cfg["input_gbp"] + output_limit * cfg["output_gbp"]) / 1e6
         session_spend = db.scalar(
             select(func.coalesce(func.sum(Usage.charged_gbp), 0)).where(Usage.lesson_id == lesson_id)
         )
@@ -75,14 +76,14 @@ class Gateway:
                     "role": "user",
                     "content": [
                         {"type": "text", "text": "只观察这张白板当前可见内容。"},
-                        {"type": "image_url", "image_url": {"url": image, "detail": "low"}},
+                        {"type": "image_url", "image_url": {"url": image, "detail": image_detail}},
                     ],
                 }
             )
         payload = {
             "model": cfg["model"],
             "messages": payload_messages,
-            settings.completion_token_field: settings.max_output_tokens,
+            settings.completion_token_field: output_limit,
         }
         headers = {"Authorization": "Bearer " + cfg["api_key"]} if cfg["api_key"] else {}
         if on_delta:
@@ -173,22 +174,3 @@ class Gateway:
             raise ModelError(
                 "模型请求失败或超时，未自动重试；费用可能已发生，已保留估算额度。请检查端点、密钥和模型。"
             ) from None
-
-
-def parse_observation(raw):
-    from pydantic import BaseModel, ConfigDict, Field
-
-    class Observation(BaseModel):
-        model_config = ConfigDict(extra="ignore")
-        visible_text: str = Field(max_length=1800)
-        confidence: float = Field(ge=0, le=1)
-        step_complete: bool
-        observation: str = Field(max_length=1200)
-
-    raw = raw.strip()
-    if raw.startswith("```"):
-        raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0]
-    try:
-        return Observation.model_validate(json.loads(raw)).model_dump()
-    except (ValueError, TypeError):
-        raise ModelError("视觉模型未返回有效的结构化观察；未进行评分或认知推断。", "invalid_observation") from None

@@ -1,6 +1,7 @@
 'use client';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import ObservationReview from '@/components/ObservationReview';
 import Settings from '@/components/Settings';
 import VoiceControls from '@/components/VoiceControls';
 import { useVoice } from '@/lib/use-voice';
@@ -66,7 +67,7 @@ export default function Home() {
     finally { setBusy(false); }
   }, [lesson, receive, report, refresh, voice]);
   useEffect(() => {
-    if (!lesson?.last_decision?.auto || lesson.paused || busy || draft || voice.active) return;
+    if (!lesson?.last_decision?.auto || lesson.paused || busy || draft || voice.active || lesson.pending_observation_id) return;
     const timer = setTimeout(() => void send('auto'), 1600);
     return () => clearTimeout(timer);
   }, [lesson, busy, draft, send, voice.active]);
@@ -138,7 +139,7 @@ export default function Home() {
       {error && <div className="error" role="alert"><span>{error}</span><button className="icon-button" onClick={() => setError('')} aria-label="关闭错误"><Icon name="close" size={14}/></button></div>}
       <input ref={fileInput} type="file" accept="application/pdf" hidden onChange={e => void upload(e.target.files?.[0])}/>
       {!lesson ? <div className="empty-workspace">{loading ? <p>正在打开课堂…</p> : <><Icon name="teacher" size={38}/><h2>{teachers.length ? '选择一位老师' : '还没有老师'}</h2><p>{teachers.length ? '从左侧选择老师，继续上次的课。' : '添加一位数学老师，开始第一节课。'}</p><button onClick={() => setModal('teacher')} className="primary"><Icon name="plus" size={14}/>添加老师</button></>}</div> : <>
-        <div className="classroom" hidden={view !== 'classroom'}><div className="workspace"><Whiteboard key={lesson.id} lesson={lesson} onResult={receive} onError={report} annotation={annotation} disabled={busy || lesson.paused || lesson.state === 'SESSION_SUMMARY'} live={config?.mode === 'live' && !voice.active}/></div>
+        <div className="classroom" hidden={view !== 'classroom'}><div className="workspace"><ObservationReview key={`review-${lesson.id}`} lesson={lesson} onResult={receive} onError={report} disabled={busy || lesson.paused || lesson.state === 'SESSION_SUMMARY' || voice.active} live={config?.mode === 'live'} /><Whiteboard key={lesson.id} lesson={lesson} onResult={receive} onError={report} annotation={annotation} disabled={busy || lesson.paused || lesson.state === 'SESSION_SUMMARY'} live={config?.mode === 'live' && !voice.active}/></div>
           <section className="conversation"><div className="chat-header"><strong>{teacher?.name}</strong><span>{teacher?.subject}</span></div><div className="chat-scroll">{lesson.messages.map((m, i) => <div key={i} className={`message ${m.role}`}><span className="message-author">{m.role === 'user' ? '你' : teacher?.name}</span><div>{m.content}</div></div>)}{voice.text && <div className="message assistant"><span className="message-author">{teacher?.name}</span><div>{voice.text}</div></div>}{busy && <div className="thinking">正在处理…</div>}<div ref={messagesEnd}/></div>
             {sources.length > 0 && <details className="chat-sources"><summary>本轮参考了 {sources.length} 处教材</summary>{sources.map((s, i) => <p key={i}>{materials.find(d => d.id === s.document_id)?.name || '教材'} · 第 {s.page} 页</p>)}</details>}
             <VoiceControls voice={voice} canAdvance={['PLANNING', 'EXPLAINING'].includes(lesson.state)} disabled={busy || lesson.paused || lesson.state === 'SESSION_SUMMARY'} edit={text => { voice.stopTeacher(); setDraft(text); }}/><div className="quick-actions"><button disabled={busy} onClick={() => void send('hint')}>给一点提示</button><button disabled={busy} onClick={() => void send('reexplain')}>重新解释</button></div>

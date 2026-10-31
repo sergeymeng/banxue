@@ -1,0 +1,12 @@
+{
+  "mode": "not_run",
+  "reason": "2026-10-31：本机配置为 demo，未配置 VISION_API_KEY 或视觉单价。没有调用真实视觉供应商，不提供识别准确率或虚构错误。",
+  "cases": [
+    {"id": "fraction", "status": "not_run"},
+    {"id": "exponent", "status": "not_run"},
+    {"id": "negative", "status": "not_run"},
+    {"id": "parentheses", "status": "not_run"},
+    {"id": "mixed", "status": "not_run"},
+    {"id": "correction", "status": "not_run"}
+  ]
+}

@@ -176,7 +176,7 @@ def provider(request):
     payload = json.loads(request.content)
     image = isinstance(payload["messages"][-1]["content"], list)
     answer = (
-        json.dumps({"visible_text": "6x+2", "confidence": 0.5, "step_complete": True, "observation": "字迹不清晰"})
+        json.dumps(vision_result())
         if image
         else "你考的是哪个考试局？"
     )
@@ -231,8 +231,7 @@ def test_timeout_reserves_and_no_secret_leak(tmp_path):
 
 
 def test_observation_confidence_no_assessment_and_dedupe(tmp_path):
-    # Minimal PNG signature is enough for adapter-contract test; browser E2E exports a real PNG.
-    image = "data:image/png;base64," + base64.b64encode(b"\x89PNG\r\n\x1a\ntest").decode()
+    image = fixture_image()
     with TestClient(create_app(live_config(tmp_path), httpx.MockTransport(provider))) as client:
         teacher, lesson = begin(client)
         path = f"/api/lessons/{lesson['id']}/observe"
@@ -347,12 +346,7 @@ def test_real_adapter_successful_observation_routes_to_reasoning(tmp_path):
         payload = json.loads(request.content)
         roles.append(payload["model"])
         if isinstance(payload["messages"][-1]["content"], list):
-            result = {
-                "visible_text": "6x+2",
-                "confidence": 0.95,
-                "step_complete": True,
-                "observation": "看见写出的导数 6x+2",
-            }
+            result = vision_result()
             return httpx.Response(
                 200,
                 json={
@@ -367,8 +361,14 @@ def test_real_adapter_successful_observation_routes_to_reasoning(tmp_path):
     )
     with TestClient(app) as c:
         teacher, lesson = begin(c)
-        image = "data:image/png;base64," + base64.b64encode(b"\x89PNG\r\n\x1a\ntest").decode()
+        image = fixture_image()
         result = c.post(f"/api/lessons/{lesson['id']}/observe", json={"image": image, "trigger": "explicit"}).json()
+        assert result["decision"]["action"] == "WAIT"
+        assert roles == ["vision-test"]
+        obs = result["observation"]
+        result = c.post(f"/api/lessons/{lesson['id']}/observations/{obs['id']}/confirm", json={
+            "image_sha256": obs["source"]["sha256"], "steps": obs["steps"], "step_complete": True,
+        }).json()
         assert result["decision"]["action"] == "ASK"
         assert roles == ["vision-test", "reason-test"]
         assert c.get(f"/api/teachers/{teacher['id']}/memory").json() == []
@@ -403,3 +403,15 @@ def test_desktop_token_protects_api_and_bundled_ui(tmp_path):
         assert c.get("/health", headers=headers).status_code == 200
         assert "Desktop classroom" in c.get("/", headers=headers).text
         assert c.get("/api/teachers", headers=headers).json() == []
+
+
+def fixture_image():
+    from pathlib import Path
+    image = Path(__file__).resolve().parents[2] / "frontend/public/handwriting/fraction.png"
+    return "data:image/png;base64," + base64.b64encode(image.read_bytes()).decode()
+
+
+def vision_result():
+    return {"steps": [{"id": "s1", "order": 1, "text": "6x+2", "expressions": ["6x+2"],
+                       "region": {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.2}, "mark": "active"}],
+            "ambiguities": [], "notes": "仅用于接口测试的固定响应，非真实识别。"}
