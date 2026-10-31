@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { apiBase } from './environment';
 
 test('teaching proposals execute with persisted receipts and student ink exports its saved revision', async ({page, request}) => {
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   const teacher = await (await request.post(`${apiBase}/api/teachers`, {data: {name: '课堂接线测试'}})).json();
   try {
     const lesson = await (await request.post(`${apiBase}/api/teachers/${teacher.id}/lessons`, {data: {}})).json();
@@ -34,5 +35,6 @@ test('teaching proposals execute with persisted receipts and student ink exports
     await page.reload();
     await expect(page.locator('[data-author="student"]')).toHaveCount(1);
     await expect(page.locator('[data-element-id^="teaching-"]')).toHaveCount(1);
+    expect(errors).toEqual([]);
   } finally { await request.delete(`${apiBase}/api/teachers/${teacher.id}`); }
 });

@@ -37,7 +37,7 @@ const os = require('node:os');
     for (const event of [{ type: 'turn', turn_id: 'smoke' }, { type: 'segment', turn_id: 'smoke', segment_id: '1', text: '桌面播放测试' },
       { type: 'audio', turn_id: 'smoke', segment_id: '1', pcm: Buffer.alloc(24000 * 2 * 5).toString('base64') }]) socket.send(JSON.stringify(event));
     await expect(page.getByRole('status').filter({ hasText: '正在讲解' })).toBeVisible();
-    await page.getByRole('button', { name: '立即停止老师' }).click();
+    await page.getByRole('button', { name: '打断' }).click();
     await page.getByRole('button', { name: '关闭语音', exact: true }).click();
     await expect(page.getByRole('button', { name: '开始语音' })).toBeVisible();
     await page.getByRole('button', { name: '课堂菜单', exact: true }).click();

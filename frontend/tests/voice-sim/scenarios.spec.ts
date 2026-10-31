@@ -27,7 +27,7 @@ test('three natural interruptions cancel old replies; late audio and text stay s
     await playing(page);
   }
   expect(await count(page, 'cancelled')).toBe(3);
-  await page.getByRole('button', { name: '立即停止老师' }).click();
+  await page.getByRole('button', { name: '打断' }).click();
   const starts = await page.evaluate(() => (window as SimWindow).voiceSim.starts);
   await request.post(`${backend}/__simulation/late/${ids.lesson}`);
   await expect.poll(() => events(page).then(e => e.some(x => x.turn_id === 'cancelled-simulation-turn'))).toBe(true);

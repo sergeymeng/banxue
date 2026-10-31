@@ -42,6 +42,7 @@ export default function Whiteboard(props: Props) {
   const pointer = useRef<{ id: number; points: Point[]; tool: Tool; client: Point; scroll: Point } | null>(null);
   const svg = useRef<SVGSVGElement | null>(null);
   const gate = useRef(new ObservationGate()), observing = useRef(false);
+  const resumeWhenUnlocked = useRef(false);
   const observeRef = useRef<() => void>(() => {});
 
   useEffect(() => {
@@ -75,7 +76,10 @@ export default function Whiteboard(props: Props) {
     engine.current = board; setLegacy(false); setSnapshot(board.getSnapshot());
     board.setLocked(latest.current.disabled);
     const handle: BoardController = {
-      enqueue: value => board.enqueue(value), pause: () => board.pause(), resume: () => board.resume(), cancel: () => board.cancel(),
+      enqueue: value => board.enqueue(value),
+      pause: () => { resumeWhenUnlocked.current = false; board.pause(); },
+      resume: () => { resumeWhenUnlocked.current = !!latest.current.disabled; if (!resumeWhenUnlocked.current) board.resume(); },
+      cancel: () => { resumeWhenUnlocked.current = false; board.cancel(); },
       getQueue: () => board.getQueue(), getSnapshot: () => board.getSnapshot(), undo: () => board.undo(), redo: () => board.redo(),
       exportRegion: options => { if (!mounted) return Promise.reject(new Error('白板控制器已失效')); return exportBoard(board.getSnapshot(), options); },
       flush: () => { if (!mounted) return Promise.reject(new Error('白板控制器已失效')); return flush(); },
@@ -86,12 +90,16 @@ export default function Whiteboard(props: Props) {
     const leaving = () => { void flush().catch(() => {}); };
     window.addEventListener('pagehide', leaving);
     return () => {
-      mounted = false; clearInterval(tick); clearTimeout(timer); window.removeEventListener('pagehide', leaving);
+      mounted = false; resumeWhenUnlocked.current = false; clearInterval(tick); clearTimeout(timer); window.removeEventListener('pagehide', leaving);
       void flush().catch(() => {}); board.dispose(); engine.current = null; controller.current = null;
       latest.current.onReady?.(null);
     };
   }, [lesson.id, restart]);
-  useEffect(() => { engine.current?.setLocked(disabled); }, [disabled]);
+  useEffect(() => {
+    const board = engine.current;
+    board?.setLocked(disabled);
+    if (board && !disabled && resumeWhenUnlocked.current) { resumeWhenUnlocked.current = false; board.resume(); }
+  }, [disabled]);
   useEffect(() => {
     if (!auto || !live || disabled) return;
     const interval = setInterval(() => { if (gate.current.ready(Date.now(), true, observing.current)) observeRef.current(); }, 1000);

@@ -67,10 +67,8 @@ test('bundled VAD detects synthetic speech and pauses native playback; stale fra
   await page.evaluate(() => (window as unknown as { injectVoice: () => Promise<number> }).injectVoice());
   await expect.poll(() => received.some(e => JSON.parse(e).type === 'begin'), { timeout: 10000 }).toBe(true);
   expect(await page.evaluate(() => (window as unknown as { voiceTest: { contexts: AudioContext[] } }).voiceTest.contexts.map(c => c.state))).toEqual(['running', 'suspended']);
-  await page.getByText('插话测量', { exact: true }).click();
-  const metricText = await page.locator('.voice-metric p').innerText();
   await mkdir('../docs/voice-evaluation', { recursive: true });
-  await writeFile('../docs/voice-evaluation/browser-synthetic.json', JSON.stringify({ stimulus: 'macOS Tingting synthetic Chinese speech injected into MediaStream; mock cloud; no physical microphone/speaker', injection_to_observed_begin_ms: beginAt - injectedAt, local_metric: metricText, physical_onset_to_speaker_stop_ms: null }, null, 2));
+  await writeFile('../docs/voice-evaluation/browser-synthetic.json', JSON.stringify({ stimulus: 'macOS Tingting synthetic Chinese speech injected into MediaStream; mock cloud; no physical microphone/speaker', injection_to_observed_begin_ms: beginAt - injectedAt, physical_onset_to_speaker_stop_ms: null }, null, 2));
   await page.screenshot({ path: '../docs/voice-evaluation/voice-classroom.png' });
   await page.getByRole('button', { name: '打断' }).click();
   await expect.poll(() => page.evaluate(() => (window as unknown as { voiceTest: { stops: number } }).voiceTest.stops)).toBeGreaterThan(0);

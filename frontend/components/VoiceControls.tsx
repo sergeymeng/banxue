@@ -11,10 +11,9 @@ export default function VoiceControls({ voice, disabled, canAdvance, edit }: { v
       {voice.active && canAdvance && <button type="button" onClick={() => voice.send('', 'auto')}>继续讲解</button>}
       {voice.active && voice.state === 'paused' && <button type="button" onClick={voice.resume}>接着讲</button>}
     </div>
-    {(voice.confirmation || voice.transcript || voice.latency !== undefined) && <div className="voice-feedback">
+    {(voice.confirmation || voice.transcript) && <div className="voice-feedback">
       {voice.confirmation && <p className="voice-transcript">{voice.confirmation}<button onClick={voice.confirm}>确认原话并继续</button></p>}
       {voice.transcript && <div className="voice-transcript"><span>{voice.final ? '识别结果' : '识别中'}：{voice.transcript}</span>{voice.final && <button className="text-button" type="button" onClick={() => edit('刚才识别有误，我说的是：' + voice.transcript)}>修改转写</button>}</div>}
-      {voice.latency !== undefined && <details className="voice-metric"><summary>插话测量</summary><p>最近 VAD 确认回调 → 本地静音指令：{voice.latency.toFixed(1)} ms。另含约 96 ms 连续语音帧确认；不含设备采集、模型推理与扬声器延迟，不代表开口到停声已达到 300 ms。</p></details>}
     </div>}
   </div>;
 }
