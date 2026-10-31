@@ -19,7 +19,7 @@ from .db import Document, Event, Knowledge, Lesson, Teacher, Usage, database, ui
 from .documents import index_chunks, parse_pdf, retrieve
 from .llm import Gateway, ModelError
 from .observations import install_observations
-from .service import new_lesson, public_lesson, turn
+from .service import new_lesson, public_lesson, receive_teaching_events, turn
 from .vision import GatewayVisionService
 from .voice_session import install_voice
 
@@ -44,6 +44,17 @@ class TurnInput(BaseModel):
 
 class BoardInput(BaseModel):
     snapshot: dict
+
+
+class BoardReceiptInput(BaseModel):
+    event_id: str = Field(min_length=1, max_length=100)
+    action_id: str = Field(min_length=1, max_length=100)
+    status: Literal["executed", "failed", "cancelled"]
+    revision: int = Field(ge=0)
+
+
+class BoardReceiptsInput(BaseModel):
+    receipts: list[BoardReceiptInput] = Field(min_length=1, max_length=100)
 
 
 def create_app(settings=None, transport=None, vision_service=None):
@@ -200,6 +211,33 @@ def create_app(settings=None, transport=None, vision_service=None):
                 row = get(db, Lesson, lesson_id)
                 row.data = {**row.data, "board": body.snapshot}
                 db.commit()
+                return {"saved": True}
+
+    @app.post("/api/lessons/{lesson_id}/board/receipts")
+    async def board_receipts(lesson_id: str, body: BoardReceiptsInput):
+        # The UI flushes its snapshot first. Delivery receipts are never grading evidence.
+        async with lock:
+            with factory() as db:
+                row = get(db, Lesson, lesson_id)
+                snapshot = row.data.get("board") or {}
+                if snapshot.get("format") != "banxue-board":
+                    raise HTTPException(409, "请先保存当前白板，再同步板书状态。")
+                queue = snapshot.get("queue")
+                if not isinstance(queue, dict) or not isinstance(queue.get("steps"), list):
+                    raise HTTPException(409, "白板队列格式不完整。")
+                steps = {step["action"].get("id"): step for step in queue["steps"]
+                         if isinstance(step, dict) and isinstance(step.get("action"), dict)}
+                events = []
+                for receipt in body.receipts:
+                    step = steps.get(receipt.action_id)
+                    if (step is None or step.get("status") != receipt.status
+                            or receipt.revision > snapshot.get("revision", -1)
+                            or (receipt.status == "executed"
+                                and step.get("executedRevision") != receipt.revision)):
+                        raise HTTPException(409, "板书回执与已保存的白板不一致。")
+                    events.append({"event_id": receipt.event_id, "kind": "board_receipt",
+                                   "action_id": receipt.action_id, "status": receipt.status})
+                receive_teaching_events(db, row, events)
                 return {"saved": True}
 
     @app.post("/api/teachers/{teacher_id}/documents")

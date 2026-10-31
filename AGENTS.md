@@ -1,5 +1,7 @@
 # Repository instructions
 
+- Shared product and classroom decisions: read `docs/CLASSROOM_DIRECTION.md`. The coordination chat owns cross-module integration; preserve other worktrees and existing user settings.
+
 - Read ARCHITECTURE.md and README.md before changing teaching behavior.
 - Python backend: `cd backend && uv run pytest -q && uv run ruff check app tests`.
 - Frontend: `cd frontend && npm run typecheck && npm test`; build for meaningful UI changes.
