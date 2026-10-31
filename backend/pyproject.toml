@@ -12,6 +12,7 @@ dependencies = [
     "pypdf>=5,<7",
     "tiktoken>=0.9,<1",
     "websockets>=15,<17",
+    "pillow>=11,<14",
 ]
 [dependency-groups]
 dev = [

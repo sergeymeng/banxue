@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     daily_budget_gbp: float = Field(default=5, ge=0)
     context_tokens: int = Field(default=4200, ge=1800, le=32000)
     max_output_tokens: int = Field(default=700, ge=64, le=8192)
+    vision_max_output_tokens: int = Field(default=4096, ge=256, le=16384)
     vision_token_allowance: int = Field(default=6000, ge=1000)
     history_messages: int = Field(default=8, ge=0, le=30)
     request_timeout: float = Field(default=45, gt=0)

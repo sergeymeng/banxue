@@ -88,7 +88,7 @@ def receive_teaching_events(db, lesson, events):
 
 async def turn(db, lesson, teacher, gateway, text="", event="message", *, voice_context=None):
     s = copy.deepcopy(lesson.data)
-    if event == "auto" and (s["state"] not in ["PLANNING", "EXPLAINING"] or s.get("paused") or voice_context is not None):
+    if event == "auto" and (s["state"] not in ["PLANNING", "EXPLAINING"] or s.get("paused") or voice_context is not None or s.get("pending_observation_id")):
         return {"lesson": public_lesson(lesson), "decision": None, "sources": []}
     if voice_context is not None:
         s["voice_context"] = voice_context
